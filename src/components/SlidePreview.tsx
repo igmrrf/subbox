@@ -37,7 +37,7 @@ export function SlidePreview({ content }: { content: string, theme?: string }) {
     const style = PLATFORM_STYLES[globalTheme.platform] || PLATFORM_STYLES.twitter;
     const isDark = globalTheme.mode === 'dark';
 
-    // Card styling based on cardStyle
+    // Card styling
     let cardBgClass = isDark ? "bg-gray-900/90 text-white" : "bg-white/90 text-gray-900";
     let cardBorderClass = isDark ? "border-gray-700" : "border-gray-200";
     let shadowClass = "shadow-2xl";
@@ -58,16 +58,35 @@ export function SlidePreview({ content }: { content: string, theme?: string }) {
         green: "bg-[#27C93F]"
     };
 
+    // Adaptive Font Sizing Logic
+    const textLength = content?.length || 0;
+    let sizeClass = '';
+    
+    if (globalTheme.fontSize === 'huge') {
+        if (textLength > 100) sizeClass = 'text-2xl'; 
+        else if (textLength > 200) sizeClass = 'text-xl';
+        else sizeClass = 'text-3xl';
+    } else if (globalTheme.fontSize === 'large') {
+        if (textLength > 150) sizeClass = 'text-lg'; 
+        else if (textLength > 250) sizeClass = 'text-base';
+        else sizeClass = 'text-xl';
+    } else { // medium
+        if (textLength > 200) sizeClass = 'text-sm';
+        else sizeClass = 'text-base';
+    }
+
     return (
         <div className="w-full flex justify-center bg-gray-100 dark:bg-gray-900/50 p-4 rounded-lg">
             <div
-                style={{ aspectRatio: style.aspectRatio }}
+                style={{ 
+                    aspectRatio: style.aspectRatio,
+                    background: globalTheme.background || undefined
+                }}
                 className={clsx(
                     "w-full max-w-[500px] flex items-center justify-center p-8 md:p-12 relative overflow-hidden transition-all duration-300",
-                    style.backgroundClass
+                    !globalTheme.background && style.backgroundClass // Only apply default class if no custom bg
                 )}
             >
-                {/* The "Carbon/Poet" Card */}
                 <div className={clsx(
                     "w-full max-w-full rounded-xl overflow-hidden flex flex-col transition-all duration-300",
                     cardBgClass,
@@ -76,7 +95,6 @@ export function SlidePreview({ content }: { content: string, theme?: string }) {
                     globalTheme.cardStyle !== 'flat' && "border",
                     cardBorderClass
                 )}>
-                     {/* Window Chrome (Traffic Lights + Social Icon) */}
                     {globalTheme.windowChrome && (
                         <div className={clsx(
                             "h-12 w-full flex items-center justify-between px-4 border-b",
@@ -87,25 +105,20 @@ export function SlidePreview({ content }: { content: string, theme?: string }) {
                                 <div className={clsx("w-3 h-3 rounded-full shadow-sm", dotColors.yellow)} />
                                 <div className={clsx("w-3 h-3 rounded-full shadow-sm", dotColors.green)} />
                             </div>
-                            
-                            {/* Social Media Icon - Increased size */}
                             <div className="opacity-70">
                                 <style.Icon size={24} />
                             </div>
                         </div>
                     )}
 
-                    {/* Content Area */}
                     <div className="p-8 md:p-10 flex-1 flex flex-col relative">
-                        <div className={clsx("font-medium whitespace-pre-wrap leading-relaxed",
-                             globalTheme.fontSize === 'medium' && 'text-base', // Reduced from lg
-                             globalTheme.fontSize === 'large' && 'text-xl',    // Reduced from 2xl
-                             globalTheme.fontSize === 'huge' && 'text-3xl',    // Reduced from 4xl
+                        <div className={clsx(
+                            "font-medium whitespace-pre-wrap leading-relaxed",
+                            sizeClass
                          )}>
                             {content || "Start typing..."}
                         </div>
 
-                        {/* User Logo (Bottom Right) */}
                         {globalTheme.logo && (
                              <div className="mt-6 flex justify-end">
                                  {/* eslint-disable-next-line @next/next/no-img-element */}

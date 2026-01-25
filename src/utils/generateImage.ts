@@ -13,6 +13,10 @@ export async function generateImage(slide: Slide, theme: GlobalTheme): Promise<B
     if (theme.logo) {
         params.append('logo', theme.logo);
     }
+
+    if (theme.background) {
+        params.append('background', theme.background);
+    }
     
     const response = await fetch(`/api/generate?${params.toString()}`);
     if (!response.ok) {

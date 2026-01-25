@@ -5,7 +5,15 @@ describe('Deck Store', () => {
     beforeEach(() => {
         useDeckStore.setState({ 
             slides: [], 
-            globalTheme: { platform: 'twitter', mode: 'light', fontSize: 'large' } 
+            sourceText: '',
+            globalTheme: { 
+                platform: 'twitter', 
+                mode: 'light', 
+                fontSize: 'large',
+                windowChrome: true,
+                cardStyle: 'solid',
+                autoSplit: true
+            } 
         });
     });
 
@@ -40,13 +48,67 @@ describe('Deck Store', () => {
         const { addSlides, moveSlide } = useDeckStore.getState();
         addSlides(['Slide 1', 'Slide 2', 'Slide 3']);
         
-        // Move Slide 1 (index 0) to position 2 (index 2)
-        // [1, 2, 3] -> [2, 3, 1]
         moveSlide(0, 2);
         
         const slides = useDeckStore.getState().slides;
         expect(slides[0].content).toBe('Slide 2');
         expect(slides[1].content).toBe('Slide 3');
         expect(slides[2].content).toBe('Slide 1');
+    });
+
+    it('should set source text', () => {
+        useDeckStore.getState().setSourceText('My source text');
+        expect(useDeckStore.getState().sourceText).toBe('My source text');
+    });
+
+    it('should auto-split when platform changes and autoSplit is true', () => {
+        // Twitter limit 140. Use text > 140 with spaces.
+        // "word " is 5 chars. 30 words = 150 chars.
+        const longText = "word ".repeat(40).trim(); 
+        
+        useDeckStore.setState({
+            sourceText: longText,
+            globalTheme: { 
+                platform: 'linkedin', // limit 300, fits
+                mode: 'light', 
+                fontSize: 'large', 
+                windowChrome: true,
+                cardStyle: 'solid',
+                autoSplit: true 
+            },
+            slides: [{ id: '1', content: longText, theme: 'linkedin' }]
+        });
+
+        // Change to twitter
+        useDeckStore.getState().setGlobalTheme({ platform: 'twitter' });
+
+        const state = useDeckStore.getState();
+        expect(state.globalTheme.platform).toBe('twitter');
+        expect(state.slides.length).toBeGreaterThan(1); 
+    });
+
+    it('should NOT auto-split when autoSplit is false', () => {
+        const longText = "word ".repeat(40).trim();
+        
+        useDeckStore.setState({
+            sourceText: longText,
+            globalTheme: { 
+                platform: 'linkedin', 
+                mode: 'light', 
+                fontSize: 'large', 
+                windowChrome: true,
+                cardStyle: 'solid',
+                autoSplit: false // Disabled
+            },
+            slides: [{ id: '1', content: longText, theme: 'linkedin' }]
+        });
+
+        // Change to twitter
+        useDeckStore.getState().setGlobalTheme({ platform: 'twitter' });
+
+        const state = useDeckStore.getState();
+        expect(state.globalTheme.platform).toBe('twitter');
+        expect(state.slides).toHaveLength(1); // Should remain 1
+        expect(state.slides[0].content).toBe(longText);
     });
 });

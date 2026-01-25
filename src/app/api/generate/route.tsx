@@ -40,6 +40,7 @@ export async function GET(request: NextRequest) {
   const logo = searchParams.get('logo');
   const windowChrome = searchParams.get('windowChrome') === 'true';
   const cardStyle = searchParams.get('cardStyle') || 'solid';
+  const backgroundParam = searchParams.get('background');
 
   if (!text) {
     return new Response('Missing text', { status: 400 });
@@ -50,7 +51,8 @@ export async function GET(request: NextRequest) {
   let height = 675; // 16:9 default (Twitter)
   
   // Background Styles
-  let background = 'linear-gradient(to bottom right, #60a5fa, #2563eb)'; // Default blue
+  // Default platform backgrounds
+  let background = 'linear-gradient(to bottom right, #60a5fa, #2563eb)';
 
   if (platform === 'linkedin') {
     width = 1080;
@@ -68,6 +70,11 @@ export async function GET(request: NextRequest) {
       background = 'linear-gradient(to bottom right, #60a5fa, #22d3ee)';
   }
 
+  // Override with custom background if present
+  if (backgroundParam) {
+      background = backgroundParam;
+  }
+
   // Card Styles
   const isDark = mode === 'dark';
   let cardBg = isDark ? 'rgba(17, 24, 39, 0.95)' : 'rgba(255, 255, 255, 0.95)';
@@ -82,10 +89,22 @@ export async function GET(request: NextRequest) {
       shadow = 'none';
   }
 
-  // Font Size - Reduced
-  let fontSizePx = 40; // Default large reduced from 50
-  if (fontSize === 'medium') fontSizePx = 28; // Reduced from 32
-  if (fontSize === 'huge') fontSizePx = 60; // Reduced from 72
+  // Adaptive Font Sizing Logic
+  const textLength = text.length;
+  let fontSizePx = 40; // Default base
+
+  if (fontSize === 'huge') {
+      if (textLength > 100) fontSizePx = 48; // down from 60
+      else if (textLength > 200) fontSizePx = 36;
+      else fontSizePx = 60;
+  } else if (fontSize === 'large') {
+      if (textLength > 150) fontSizePx = 32; // down from 40
+      else if (textLength > 250) fontSizePx = 28;
+      else fontSizePx = 40;
+  } else { // medium
+      if (textLength > 200) fontSizePx = 24;
+      else fontSizePx = 28;
+  }
 
   // Icon
   // @ts-ignore
@@ -101,8 +120,8 @@ export async function GET(request: NextRequest) {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundImage: background,
-          backgroundColor: background.includes('gradient') ? undefined : background,
+          backgroundImage: background.includes('gradient') ? background : undefined,
+          backgroundColor: !background.includes('gradient') ? background : undefined,
           padding: 80, // Outer padding
         }}
       >
@@ -122,7 +141,7 @@ export async function GET(request: NextRequest) {
           {/* Window Chrome */}
           {windowChrome && (
               <div style={{
-                  height: 80, // Increased height for bigger icon
+                  height: 80, 
                   width: '100%',
                   display: 'flex',
                   alignItems: 'center',
@@ -137,7 +156,6 @@ export async function GET(request: NextRequest) {
                       <div style={{ width: 16, height: 16, borderRadius: '50%', backgroundColor: '#27C93F' }} />
                   </div>
                   
-                  {/* Social Icon - Increased size via SVG width/height above */}
                   <div style={{ display: 'flex' }}>
                       {PlatformIcon(iconColor)}
                   </div>

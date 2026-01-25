@@ -1,6 +1,7 @@
 import { useDeckStore } from '@/store/deck-store';
-import { Monitor, Smartphone, Instagram, Linkedin, Twitter, Upload, X, Layout, Layers, Wand2 } from 'lucide-react';
+import { Monitor, Smartphone, Instagram, Linkedin, Twitter, Upload, X, Layout, Layers, Wand2, Palette, RefreshCcw } from 'lucide-react';
 import clsx from 'clsx';
+import { useState } from 'react';
 
 const PLATFORMS = [
   { id: 'twitter', label: 'Twitter', icon: Twitter },
@@ -9,8 +10,18 @@ const PLATFORMS = [
   { id: 'tiktok', label: 'TikTok', icon: Smartphone },
 ] as const;
 
+const PRESET_GRADIENTS = [
+    'linear-gradient(to bottom right, #f472b6, #d8b4fe, #818cf8)', // Sunset
+    'linear-gradient(to bottom right, #2dd4bf, #3b82f6, #6366f1)', // Ocean
+    'linear-gradient(to bottom right, #fbbf24, #f87171, #ef4444)', // Heat
+    'linear-gradient(to bottom right, #34d399, #10b981, #059669)', // Forest
+    'linear-gradient(to bottom right, #1f2937, #111827, #000000)', // Dark
+    'linear-gradient(to bottom right, #ffffff, #f3f4f6, #e5e7eb)', // Light
+];
+
 export function ThemeSelector() {
   const { globalTheme, setGlobalTheme } = useDeckStore();
+  const [customColors, setCustomColors] = useState({ start: '#3b82f6', end: '#9333ea' });
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
@@ -23,15 +34,26 @@ export function ThemeSelector() {
       }
   };
 
+  const applyCustomGradient = (start: string, end: string) => {
+      setCustomColors({ start, end });
+      setGlobalTheme({ background: `linear-gradient(135deg, ${start}, ${end})` });
+  };
+
   return (
-    <div className="flex flex-col gap-4 p-4 border-b border-gray-200 dark:border-gray-800 overflow-y-auto max-h-[400px]">
+    <div className="flex flex-col gap-6 p-4 border-b border-gray-200 dark:border-gray-800 overflow-y-auto max-h-[calc(100vh-100px)]">
       <div>
         <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">Platform</label>
         <div className="flex gap-2">
           {PLATFORMS.map((p) => (
             <button
               key={p.id}
-              onClick={() => setGlobalTheme({ platform: p.id })}
+              onClick={() => {
+                  setGlobalTheme({ platform: p.id, background: undefined }); // Reset bg on platform switch? Or keep? 
+                  // Usually user expects platform theme defaults unless explicit override.
+                  // Let's keep override if it was explicitly set, but here maybe we want to allow "resetting" easily.
+                  // For now, let's NOT reset background automatically to allow "applying twitter layout to my custom purple bg".
+                  setGlobalTheme({ platform: p.id });
+              }}
               className={clsx(
                 "p-2 rounded-md transition-colors",
                 globalTheme.platform === p.id
@@ -65,39 +87,43 @@ export function ThemeSelector() {
               ))}
            </div>
            
-           <div className="flex items-center justify-between mb-4">
-               <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider block">Window Chrome</label>
-               <button
-                  onClick={() => setGlobalTheme({ windowChrome: !globalTheme.windowChrome })}
-                  className={clsx(
-                      "w-10 h-6 rounded-full transition-colors relative cursor-pointer",
-                      globalTheme.windowChrome ? "bg-blue-500" : "bg-gray-300 dark:bg-gray-700"
-                  )}
-               >
-                   <div className={clsx(
-                       "absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform",
-                       globalTheme.windowChrome && "translate-x-4"
-                   )} />
-               </button>
-           </div>
-
-           <div className="flex items-center justify-between mb-4">
-               <div className="flex items-center gap-2">
-                   <Wand2 size={14} className="text-purple-500" />
-                   <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider block">Auto Split</label>
+           {/* Toggles */}
+           <div className="space-y-3 mb-4">
+               <div className="flex items-center justify-between">
+                   <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider block">Window Chrome</label>
+                   <button
+                      onClick={() => setGlobalTheme({ windowChrome: !globalTheme.windowChrome })}
+                      className={clsx(
+                          "w-10 h-6 rounded-full transition-colors relative cursor-pointer",
+                          globalTheme.windowChrome ? "bg-blue-500" : "bg-gray-300 dark:bg-gray-700"
+                      )}
+                   >
+                       <div className={clsx(
+                           "absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform",
+                           globalTheme.windowChrome && "translate-x-4"
+                       )} />
+                   </button>
                </div>
-               <button
-                  onClick={() => setGlobalTheme({ autoSplit: !globalTheme.autoSplit })}
-                  className={clsx(
-                      "w-10 h-6 rounded-full transition-colors relative cursor-pointer",
-                      globalTheme.autoSplit ? "bg-purple-500" : "bg-gray-300 dark:bg-gray-700"
-                  )}
-               >
-                   <div className={clsx(
-                       "absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform",
-                       globalTheme.autoSplit && "translate-x-4"
-                   )} />
-               </button>
+
+               <div className="flex items-center justify-between">
+                   <div className="flex items-center gap-2">
+                       <Wand2 size={14} className="text-purple-500" />
+                       <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider block">Auto Split</label>
+                   </div>
+                   <button
+                      onClick={() => setGlobalTheme({ autoSplit: !globalTheme.autoSplit })}
+                      aria-label="Toggle Auto Split"
+                      className={clsx(
+                          "w-10 h-6 rounded-full transition-colors relative cursor-pointer",
+                          globalTheme.autoSplit ? "bg-purple-500" : "bg-gray-300 dark:bg-gray-700"
+                      )}
+                   >
+                       <div className={clsx(
+                           "absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform",
+                           globalTheme.autoSplit && "translate-x-4"
+                       )} />
+                   </button>
+               </div>
            </div>
            
            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">Card Style</label>
@@ -116,6 +142,57 @@ export function ThemeSelector() {
                       {style}
                   </button>
               ))}
+           </div>
+
+           {/* Background Palette */}
+           <div className="mb-4">
+               <div className="flex items-center justify-between mb-2">
+                   <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider block">Background</label>
+                   {globalTheme.background && (
+                       <button 
+                           onClick={() => setGlobalTheme({ background: undefined })}
+                           className="text-xs text-blue-500 hover:text-blue-600 flex items-center gap-1"
+                       >
+                           <RefreshCcw size={10} /> Reset
+                       </button>
+                   )}
+               </div>
+               
+               {/* Presets */}
+               <div className="grid grid-cols-6 gap-2 mb-3">
+                   {PRESET_GRADIENTS.map((bg, i) => (
+                       <button
+                           key={i}
+                           onClick={() => setGlobalTheme({ background: bg })}
+                           className={clsx(
+                               "w-full aspect-square rounded-full border hover:scale-110 transition-transform",
+                               globalTheme.background === bg ? "ring-2 ring-blue-500 ring-offset-2" : "border-gray-200"
+                           )}
+                           style={{ background: bg }}
+                           aria-label={`Preset ${i + 1}`}
+                       />
+                   ))}
+               </div>
+
+               {/* Custom Builder */}
+               <div className="flex items-center gap-2 text-sm bg-gray-50 dark:bg-gray-900 p-2 rounded-lg">
+                   <Palette size={14} className="text-gray-400" />
+                   <span className="text-xs text-gray-500">Custom</span>
+                   <input 
+                       type="color" 
+                       value={customColors.start}
+                       onChange={(e) => applyCustomGradient(e.target.value, customColors.end)}
+                       className="w-6 h-6 rounded cursor-pointer border-none bg-transparent"
+                       title="Start Color"
+                   />
+                   <input 
+                       type="color" 
+                       value={customColors.end}
+                       onChange={(e) => applyCustomGradient(customColors.start, e.target.value)}
+                       className="w-6 h-6 rounded cursor-pointer border-none bg-transparent"
+                       title="End Color"
+                   />
+               </div>
            </div>
 
            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">Brand Logo</label>

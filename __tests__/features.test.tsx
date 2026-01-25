@@ -40,7 +40,7 @@ describe('Subbox Features', () => {
             slides: [
                 { id: '1', content: 'Slide 1', theme: 'twitter' }
             ],
-            globalTheme: { platform: 'twitter', mode: 'light', fontSize: 'large' },
+            globalTheme: { platform: 'twitter', mode: 'light', fontSize: 'large', autoSplit: true, windowChrome: true, cardStyle: 'solid' },
             _hasHydrated: true
         });
         vi.clearAllMocks();
@@ -74,7 +74,7 @@ describe('Subbox Features', () => {
     it('TC-4.3: LinkedIn theme shows browser chrome', () => {
         useDeckStore.setState({
              slides: [{ id: '1', content: 'Linked', theme: 'linkedin' }],
-             globalTheme: { platform: 'linkedin', mode: 'light', fontSize: 'large' }
+             globalTheme: { platform: 'linkedin', mode: 'light', fontSize: 'large', autoSplit: true, windowChrome: true, cardStyle: 'solid' }
         });
         
         render(<Editor />);
@@ -153,12 +153,6 @@ describe('Subbox Features', () => {
         vi.spyOn(window, 'prompt').mockReturnValue('https://www.reddit.com/r/test/comments/123/title/');
         
         // Mock fetch for the API call from the component
-        // Note: The component calls /api/unfurl. The logic INSIDE /api/unfurl calls reddit.
-        // But here we are integration testing the Component + API response interactions.
-        // We cannot test the server-side logic (the POST handler code) directly here easily unless we call the function directly
-        // or mock the fetch call that the COMPONENT makes to return what the API WOULD return.
-        
-        // So we mock the response from /api/unfurl
         (global.fetch as any).mockResolvedValueOnce({
             json: async () => ({
                 title: 'Reddit Title',
@@ -176,6 +170,19 @@ describe('Subbox Features', () => {
             expect(state.slides[0].content).toContain('Reddit Title');
             expect(state.slides[0].content).toContain('Reddit Body');
         });
+    });
+
+    it('TC-9.1: Auto Split toggle updates store', () => {
+        render(<ThemeSelector />);
+        const toggleBtn = screen.getByLabelText('Toggle Auto Split');
+        
+        // Initial state is true
+        expect(useDeckStore.getState().globalTheme.autoSplit).toBe(true);
+        
+        fireEvent.click(toggleBtn);
+        
+        // Should toggle to false
+        expect(useDeckStore.getState().globalTheme.autoSplit).toBe(false);
     });
 });
 

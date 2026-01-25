@@ -17,6 +17,7 @@ export interface GlobalTheme {
   windowChrome: boolean;
   cardStyle: 'glass' | 'solid' | 'flat';
   autoSplit: boolean;
+  background?: string; // Custom CSS background (color or gradient)
 }
 
 interface DeckState {

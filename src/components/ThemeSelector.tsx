@@ -40,7 +40,7 @@ export function ThemeSelector() {
   };
 
   return (
-    <div className="flex flex-col gap-6 p-4 border-b border-gray-200 dark:border-gray-800 overflow-y-auto max-h-[calc(100vh-100px)]">
+    <div className="flex flex-col gap-6 p-4 border-b border-gray-200 dark:border-gray-800">
       <div>
         <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">Platform</label>
         <div className="flex gap-2">

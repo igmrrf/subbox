@@ -104,7 +104,7 @@ describe('Subbox Features', () => {
     it('TC-5.2: Export All triggers JSZip and saveAs', async () => {
         // Need to render Home to get Sidebar
         render(<Home />);
-        const exportBtn = screen.getByText('Export All');
+        const exportBtn = screen.getByText('Export');
         
         // Mock generateImage response for the slide
         (global.fetch as any).mockResolvedValue({

@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 interface SmartPasteModalProps {
   isOpen: boolean;
@@ -7,7 +7,12 @@ interface SmartPasteModalProps {
   slideCount: number;
 }
 
-export function SmartPasteModal({ isOpen, onClose, onConfirm, slideCount }: SmartPasteModalProps) {
+export function SmartPasteModal({
+  isOpen,
+  onClose,
+  onConfirm,
+  slideCount,
+}: SmartPasteModalProps) {
   if (!isOpen) return null;
 
   return (
@@ -15,7 +20,8 @@ export function SmartPasteModal({ isOpen, onClose, onConfirm, slideCount }: Smar
       <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-sm w-full shadow-xl border border-gray-200 dark:border-gray-700">
         <h3 className="text-lg font-bold mb-2">Long Text Detected</h3>
         <p className="text-gray-600 dark:text-gray-300 mb-4">
-          The text you pasted is quite long. Would you like to automatically split it into <strong>{slideCount}</strong> separate slides?
+          The text you pasted is quite long. Would you like to automatically
+          split it into <strong>{slideCount}</strong> separate slides?
         </p>
         <div className="flex justify-end gap-3">
           <button

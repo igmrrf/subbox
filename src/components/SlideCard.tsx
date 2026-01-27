@@ -97,8 +97,38 @@ export function SlideCard({ slide, index }: SlideCardProps) {
       const data = await res.json();
       if (data.error) throw new Error(data.error);
 
-      const content = `${data.title}\n\n${data.description}`;
-      updateSlide(slide.id, { content });
+      // Construct updates
+      const updates: Partial<Slide> = {
+        content: data.text || slide.content,
+      };
+
+      // Update Theme/Platform if detected
+      if (data.platform) {
+        updates.theme = data.platform;
+        // Optionally update global theme to match if desired, but usually per-slide is safer?
+        // The user asked for "platform as the logo".
+        // We will update the slide's theme.
+      }
+
+      // Update Author
+      if (data.author && (data.author.name || data.author.handle)) {
+        updates.author = {
+          name: data.author.name || slide.author.name,
+          handle: data.author.handle || slide.author.handle,
+          avatar: data.author.avatar || slide.author.avatar,
+        };
+      }
+
+      // Update Stats
+      if (data.stats) {
+        updates.stats = {
+          likes: data.stats.likes ?? slide.stats.likes,
+          replies: data.stats.replies ?? slide.stats.replies,
+          shares: data.stats.shares ?? slide.stats.shares,
+        };
+      }
+
+      updateSlide(slide.id, updates);
     } catch (e) {
       console.error(e);
       alert("Failed to fetch URL metadata");

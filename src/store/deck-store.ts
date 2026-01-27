@@ -178,6 +178,15 @@ export const useDeckStore = create<DeckState>()(
       setGlobalTheme: (themeUpdates) => {
         set((state) => {
           const newTheme = { ...state.globalTheme, ...themeUpdates };
+          let newSlides = state.slides;
+
+          // Update all slides to match new platform if platform changed
+          if (themeUpdates.platform) {
+            newSlides = newSlides.map((s) => ({
+              ...s,
+              theme: themeUpdates.platform!,
+            }));
+          }
 
           // If platform changed and we have sourceText AND autoSplit is enabled
           if (
@@ -191,7 +200,7 @@ export const useDeckStore = create<DeckState>()(
             const limit = PLATFORM_LIMITS[newTheme.platform] || 280;
             const newContents = splitTextContent(state.sourceText, limit);
 
-            const newSlides = newContents.map((content) => ({
+            newSlides = newContents.map((content) => ({
               id: uuidv4(),
               content,
               theme: newTheme.platform,
@@ -203,14 +212,12 @@ export const useDeckStore = create<DeckState>()(
                 year: "numeric",
               }),
             }));
-
-            return {
-              globalTheme: newTheme,
-              slides: newSlides,
-            };
           }
 
-          return { globalTheme: newTheme };
+          return {
+            globalTheme: newTheme,
+            slides: newSlides,
+          };
         });
       },
     }),

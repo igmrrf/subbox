@@ -249,6 +249,7 @@ export async function POST(request: NextRequest) {
       ? "rgba(17, 24, 39, 0.9)" // bg-gray-900/90
       : "rgba(255, 255, 255, 0.9)"; // bg-white/90
     let textColor = isDark ? "white" : "#111827"; // text-gray-900
+    let secondaryTextColor = isDark ? "#d1d5db" : "#6b7280"; // gray-300 vs gray-500
     let borderColor = isDark ? "#374151" : "#e5e7eb"; // border-gray-700 : border-gray-200
     let shadow = "0 25px 50px -12px rgba(0, 0, 0, 0.25)"; // shadow-2xl
     let footerBorder = isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)";
@@ -303,8 +304,11 @@ export async function POST(request: NextRequest) {
     // Inner: p-6 (24px) * 2.4 = ~58px
     const innerPadding = s(24);
 
+    // We keep minHeight as the original calculated height to preserve aspect ratio for small content
+    const minHeight = height;
+
     const containerStyle: React.CSSProperties = {
-      height: "100%",
+      minHeight: minHeight, // Ensure it's at least the aspect ratio height
       width: "100%",
       display: "flex",
       alignItems: "center",
@@ -323,9 +327,11 @@ export async function POST(request: NextRequest) {
       borderRadius: s(12), // rounded-xl (12px)
       boxShadow: shadow,
       width: "100%",
-      height: "100%",
+      // Remove fixed height and overflow hidden to allow growth
+      // But we might want minHeight here too if we want the card to fill the container
+      // when content is small.
+      minHeight: "100%",
       maxWidth: "100%",
-      overflow: "hidden",
       ...(cardStyle !== "flat" ? { border: `1px solid ${borderColor}` } : {}),
     };
 
@@ -436,6 +442,17 @@ export async function POST(request: NextRequest) {
                 >
                   {safeAuthor.name}
                 </span>
+                {safeAuthor.handle && (
+                  <span
+                    style={{
+                      fontSize: s(14),
+                      color: secondaryTextColor,
+                      marginTop: s(4),
+                    }}
+                  >
+                    {safeAuthor.handle}
+                  </span>
+                )}
               </div>
             </div>
 
@@ -468,7 +485,7 @@ export async function POST(request: NextRequest) {
               >
                 <div
                   style={{
-                    color: "#6b7280",
+                    color: secondaryTextColor,
                     fontSize: s(14),
                     marginBottom: s(12),
                     fontWeight: 500,
@@ -483,8 +500,8 @@ export async function POST(request: NextRequest) {
                   <div
                     style={{ display: "flex", alignItems: "center", gap: s(8) }}
                   >
-                    <div style={{ color: "#6b7280", display: "flex" }}>
-                      {ICONS.reply("#6b7280")}
+                    <div style={{ color: secondaryTextColor, display: "flex" }}>
+                      {ICONS.reply(secondaryTextColor)}
                     </div>
                     <span
                       style={{
@@ -497,7 +514,7 @@ export async function POST(request: NextRequest) {
                       <span
                         style={{
                           fontWeight: 400,
-                          color: "#6b7280",
+                          color: secondaryTextColor,
                           marginLeft: s(4),
                         }}
                       ></span>
@@ -506,8 +523,8 @@ export async function POST(request: NextRequest) {
                   <div
                     style={{ display: "flex", alignItems: "center", gap: s(8) }}
                   >
-                    <div style={{ color: "#6b7280", display: "flex" }}>
-                      {ICONS.share("#6b7280")}
+                    <div style={{ color: secondaryTextColor, display: "flex" }}>
+                      {ICONS.share(secondaryTextColor)}
                     </div>
                     <span
                       style={{
@@ -520,7 +537,7 @@ export async function POST(request: NextRequest) {
                       <span
                         style={{
                           fontWeight: 400,
-                          color: "#6b7280",
+                          color: secondaryTextColor,
                           marginLeft: s(4),
                         }}
                       ></span>
@@ -529,8 +546,8 @@ export async function POST(request: NextRequest) {
                   <div
                     style={{ display: "flex", alignItems: "center", gap: s(8) }}
                   >
-                    <div style={{ color: "#6b7280", display: "flex" }}>
-                      {ICONS.heart("#6b7280")}
+                    <div style={{ color: secondaryTextColor, display: "flex" }}>
+                      {ICONS.heart(secondaryTextColor)}
                     </div>
                     <span
                       style={{
@@ -543,7 +560,7 @@ export async function POST(request: NextRequest) {
                       <span
                         style={{
                           fontWeight: 400,
-                          color: "#6b7280",
+                          color: secondaryTextColor,
                           marginLeft: s(4),
                         }}
                       ></span>
@@ -557,7 +574,7 @@ export async function POST(request: NextRequest) {
       </div>,
       {
         width,
-        height,
+        // height: height, // REMOVED fixed height to allow auto-growth
         fonts: [
           {
             name: "Inter",

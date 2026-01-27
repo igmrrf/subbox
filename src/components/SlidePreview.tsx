@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { Author, useDeckStore, type Slide } from "@/store/deck-store";
 import clsx from "clsx";
 import {
@@ -85,8 +84,11 @@ export function SlidePreview({
     return num.toString();
   };
 
-  const style =
-    PLATFORM_STYLES[globalTheme.platform] || PLATFORM_STYLES.twitter;
+  // Use local theme (from prop) if available and valid, otherwise global
+  const platformKey =
+    (theme as keyof typeof PLATFORM_STYLES) || globalTheme.platform;
+  const style = PLATFORM_STYLES[platformKey] || PLATFORM_STYLES.twitter;
+
   const isDark = globalTheme.mode === "dark";
 
   // Card styling
@@ -133,33 +135,56 @@ export function SlidePreview({
   }
 
   return (
-    <div className="w-full h-full max-h-screen flex justify-center bg-gray-100 dark:bg-gray-900/50 p-4 rounded-lg">
+    <div className="w-full h-full min-h-[500px] flex justify-center items-center bg-gray-100 dark:bg-gray-900/50 p-4 rounded-lg overflow-y-auto">
       <div
         style={{
-          aspectRatio: style.aspectRatio,
+          // We use style.aspectRatio as a baseline, but allow growing
+          // If we just use aspectRatio in CSS, it might constrain height.
+          // Instead, let's use a min-height calculation or just allow auto.
+          // For now, let's remove strict aspectRatio from style to allow growth,
+          // but maybe apply a min-width/height to simulate the shape?
+          // Actually, "aspect-ratio" property in modern CSS *does* allow content to push it if min-height is auto?
+          // No, usually it preserves ratio.
+          // Let's set it as a customized class or style if needed, but the user requested "auto fit".
+          // We'll keep the background/padding wrapper.
           ...(globalTheme.background && {
             background: globalTheme.background,
           }),
         }}
         className={clsx(
-          "w-full max-w-250 flex items-center justify-center p-8 md:p-12 relative transition-all duration-300",
-          !globalTheme.background && style.backgroundClass, // Only apply default class if no custom bg
+          "w-full max-w-[600px] flex items-center justify-center p-8 md:p-12 relative transition-all duration-300",
+          !globalTheme.background && style.backgroundClass,
+          // Use a class to enforce ratio ONLY if content is small?
+          // Or just remove ratio constraint to ensure "never go out of view"?
+          // The user said "aspectRatio and other information" is important, so we should try to keep it
+          // BUT expand if needed.
         )}
       >
+        {/* We wrap the card in a div that enforces the ratio as a MINIMUM, 
+              or just apply the ratio to this wrapper but allow overflow-visible? 
+              If we want the background to grow, the wrapper must grow. 
+          */}
         <div
           className={clsx(
-            "w-full max-w-full h-full rounded-xl overflow-hidden flex flex-col transition-all duration-300",
+            "w-full h-full rounded-xl flex flex-col transition-all duration-300",
+            // Removed overflow-hidden to allow growth? No, we want the card to grow.
+            // If we remove h-full, it will grow.
+            "min-h-[300px]",
             cardBgClass,
             shadowClass,
             backdropClass,
             globalTheme.cardStyle !== "flat" && "border",
             cardBorderClass,
           )}
+          style={{
+            // If we want to emulate the aspect ratio, we can try, but prioritizing content fit:
+            aspectRatio: style.aspectRatio,
+          }}
         >
           {globalTheme.windowChrome && (
             <div
               className={clsx(
-                "h-12 w-full flex items-center justify-between px-4 border-b",
+                "h-12 shrink-0 w-full flex items-center justify-between px-4 border-b",
                 isDark ? "border-white/10" : "border-black/5",
               )}
             >
@@ -200,7 +225,7 @@ export function SlidePreview({
 
           <div className="p-8 md:p-10 flex-1 flex flex-col relative">
             {/* User Header */}
-            <div className="flex items-center gap-3 mb-6">
+            <div className="flex items-center gap-3 mb-6 shrink-0">
               <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center overflow-hidden border border-black/5 dark:border-white/10">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -218,7 +243,11 @@ export function SlidePreview({
                 >
                   {safeAuthor.name}
                 </span>
-                {/* Handle hidden as per niceone.png, but could be added: <span className="text-gray-500 text-sm">{safeAuthor.handle}</span> */}
+                {safeAuthor.handle && (
+                  <span className="text-gray-500 dark:text-gray-400 text-sm">
+                    {safeAuthor.handle}
+                  </span>
+                )}
               </div>
             </div>
 
@@ -233,13 +262,13 @@ export function SlidePreview({
 
             {/* Footer Meta */}
             {(globalTheme.showFooter ?? true) && (
-              <div className="mt-auto pt-4 border-t border-gray-100 dark:border-gray-800/50">
-                <div className="text-gray-500 text-sm mb-3 font-medium opacity-80">
+              <div className="mt-auto pt-4 border-t border-gray-100 dark:border-gray-800/50 shrink-0">
+                <div className="text-gray-500 dark:text-gray-400 text-sm mb-3 font-medium opacity-80">
                   {safeDate}
                 </div>
                 <div className="flex items-center gap-6">
                   <div className="flex items-center gap-2 group">
-                    <div className="p-1.5 rounded-full group-hover:bg-blue-50 dark:group-hover:bg-blue-900/20 text-gray-500 transition-colors">
+                    <div className="p-1.5 rounded-full group-hover:bg-blue-50 dark:group-hover:bg-blue-900/20 text-gray-500 dark:text-gray-400 transition-colors">
                       <MessageCircle size={18} />
                     </div>
                     <span className="text-gray-900 dark:text-gray-100 font-bold text-sm">
@@ -247,7 +276,7 @@ export function SlidePreview({
                     </span>
                   </div>
                   <div className="flex items-center gap-2 group">
-                    <div className="p-1.5 rounded-full group-hover:bg-green-50 dark:group-hover:bg-green-900/20 text-gray-500 transition-colors">
+                    <div className="p-1.5 rounded-full group-hover:bg-green-50 dark:group-hover:bg-green-900/20 text-gray-500 dark:text-gray-400 transition-colors">
                       <Repeat2 size={18} />
                     </div>
                     <span className="text-gray-900 dark:text-gray-100 font-bold text-sm">
@@ -255,7 +284,7 @@ export function SlidePreview({
                     </span>
                   </div>
                   <div className="flex items-center gap-2 group">
-                    <div className="p-1.5 rounded-full group-hover:bg-pink-50 dark:group-hover:bg-pink-900/20 text-gray-500 transition-colors">
+                    <div className="p-1.5 rounded-full group-hover:bg-pink-50 dark:group-hover:bg-pink-900/20 text-gray-500 dark:text-gray-400 transition-colors">
                       <Heart size={18} />
                     </div>
                     <span className="text-gray-900 dark:text-gray-100 font-bold text-sm">

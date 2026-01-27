@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { v4 as uuidv4 } from "uuid";
 import { persist } from "zustand/middleware";
 import { splitTextContent, PLATFORM_LIMITS } from "@/utils/textUtils";
+import { clearAllBrowserData } from "@/utils/storage";
 export const Author = {
   name: "Subbox",
   handle: "@subbox",
@@ -42,6 +43,38 @@ export interface GlobalTheme {
   showFooter: boolean;
 }
 
+const INITIAL_THEME: GlobalTheme = {
+  platform: "twitter",
+  mode: "light",
+  fontSize: "large",
+  windowChrome: true,
+  cardStyle: "solid",
+  autoSplit: true,
+  showFooter: true,
+};
+
+const INITIAL_SLIDES: Slide[] = [
+  {
+    id: "default-slide",
+    content: "Welcome to Subbox!",
+    theme: "twitter",
+    author: Author,
+    stats: {
+      likes: 4200,
+      replies: 128,
+      shares: 890,
+    },
+    date: new Date().toLocaleDateString("en-US", {
+      hour: "numeric",
+      minute: "numeric",
+      hour12: true,
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    }),
+  },
+];
+
 const generateRandomStats = () => ({
   likes: Math.floor(Math.random() * (50000 - 100 + 1)) + 100,
   replies: Math.floor(Math.random() * 5000),
@@ -61,42 +94,24 @@ interface DeckState {
   setGlobalTheme: (theme: Partial<GlobalTheme>) => void;
   addSlides: (contents: string[]) => void;
   setSourceText: (text: string) => void;
+  reset: () => void;
 }
 
 export const useDeckStore = create<DeckState>()(
   persist(
     (set, get) => ({
-      slides: [
-        {
-          id: "default-slide",
-          content: "Welcome to Subbox!",
-          theme: "twitter",
-          author: Author,
-          stats: {
-            likes: 4200,
-            replies: 128,
-            shares: 890,
-          },
-          date: new Date().toLocaleDateString("en-US", {
-            hour: "numeric",
-            minute: "numeric",
-            hour12: true,
-            day: "numeric",
-            month: "short",
-            year: "numeric",
-          }),
-        },
-      ],
-      globalTheme: {
-        platform: "twitter",
-        mode: "light",
-        fontSize: "large",
-        windowChrome: true,
-        cardStyle: "solid",
-        autoSplit: true,
-        showFooter: true,
-      },
+      slides: INITIAL_SLIDES,
+      globalTheme: INITIAL_THEME,
       sourceText: "",
+
+      reset: () => {
+        set({
+          slides: INITIAL_SLIDES,
+          globalTheme: INITIAL_THEME,
+          sourceText: "",
+        });
+        clearAllBrowserData();
+      },
 
       addSlide: () =>
         set((state) => ({

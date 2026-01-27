@@ -3,17 +3,16 @@
 import clsx from "clsx";
 import { saveAs } from "file-saver";
 import JSZip from "jszip";
-import { DownloadCloud, Menu, Plus, X } from "lucide-react";
-import { useLayoutEffect, useState } from "react";
+import { DownloadCloud, Menu, Plus, Trash2, X } from "lucide-react";
+import { useState } from "react";
 import { Editor } from "@/components/Editor";
 import { SortableSlideList } from "@/components/SortableSlideList";
 import { ThemeSelector } from "@/components/ThemeSelector";
 import { useDeckStore } from "@/store/deck-store";
 import { generateImage } from "@/utils/generateImage";
-import { clearAllBrowserData } from "@/utils/storage";
 
 export default function Home() {
-  const { slides, addSlide, globalTheme } = useDeckStore();
+  const { slides, addSlide, globalTheme, reset } = useDeckStore();
   const [isExporting, setIsExporting] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -40,14 +39,12 @@ export default function Home() {
       setIsExporting(false);
     }
   };
-  useLayoutEffect(() => {
-    (async () => {
-      if (!localStorage.getItem("cleared")) {
-        await clearAllBrowserData();
-        localStorage.setItem("cleared", "cleared");
-      }
-    })();
-  });
+
+  const handleReset = () => {
+    if (confirm("Are you sure you want to reset everything? This will clear all slides and settings.")) {
+      reset();
+    }
+  };
 
   return (
     <div className="flex h-screen flex-col md:flex-row bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 overflow-hidden">
@@ -109,6 +106,14 @@ export default function Home() {
                 <DownloadCloud size={16} /> {isExporting ? "..." : "Export"}
               </button>
             </div>
+
+            <button
+                type="button"
+                onClick={handleReset}
+                className="flex items-center justify-center gap-2 w-full text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 px-4 py-2 rounded-md transition-colors cursor-pointer text-sm"
+              >
+                <Trash2 size={14} /> Reset Deck
+            </button>
 
             <div className="pt-2 border-t border-gray-100 dark:border-gray-800">
               <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">

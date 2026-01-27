@@ -3,6 +3,8 @@ import path from "node:path";
 import { type NextRequest, NextResponse } from "next/server";
 import satori from "satori";
 import { Resvg } from "@resvg/resvg-js";
+import { Author } from "@/store/deck-store";
+import sharp from "sharp";
 
 export const runtime = "nodejs";
 
@@ -92,13 +94,56 @@ const ICONS = {
       <path d="M12 18h.01" />
     </svg>
   ),
+  reply: (color: string) => (
+    <svg
+      width="48"
+      height="48"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
+    </svg>
+  ),
+  share: (color: string) => (
+    <svg
+      width="48"
+      height="48"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="m17 2 5 5-5 5" />
+      <path d="M22 7H7a5 5 0 0 0-5 5v5" />
+    </svg>
+  ),
+  heart: (color: string) => (
+    <svg
+      width="48"
+      height="48"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
+    </svg>
+  ),
 };
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    const {
+    let {
       text = "",
       platform = "twitter",
       mode = "light",
@@ -107,7 +152,67 @@ export async function POST(request: NextRequest) {
       windowChrome = false,
       cardStyle = "solid",
       background: backgroundParam,
+      author,
+      stats,
+      date,
+      showFooter = true,
     } = body;
+
+    const safeAuthor = author || Author;
+    const safeStats = stats || { likes: 0, replies: 0, shares: 0 };
+    const safeDate =
+      date ||
+      new Date().toLocaleDateString("en-GB", {
+        hour: "numeric",
+        minute: "numeric",
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        hour12: true,
+      });
+
+    const formatNumber = (num: number) => {
+      if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
+      return num.toString();
+    };
+
+    // Load default avatar if needed
+    let avatarSrc = safeAuthor.avatar;
+    if (avatarSrc.startsWith("/")) {
+      const filePath = path.join(
+        process.cwd(),
+        "public",
+        avatarSrc.replace(/^\//, ""),
+      );
+      const avatarBuffer = await fs.promises.readFile(filePath);
+      const ext = path.extname(filePath).toLowerCase();
+
+      if (ext === ".png") {
+        avatarSrc = `data:image/png;base64,${avatarBuffer.toString("base64")}`;
+      } else {
+        // Convert to PNG to ensure Satori compatibility (it struggles with WebP in some envs)
+        const pngBuffer = await sharp(avatarBuffer).png().toBuffer();
+        avatarSrc = `data:image/png;base64,${pngBuffer.toString("base64")}`;
+      }
+    }
+
+    // Process logo if it's a non-PNG data URL
+    if (
+      logo &&
+      logo.startsWith("data:image/") &&
+      !logo.startsWith("data:image/png")
+    ) {
+      try {
+        const base64Data = logo.split(",")[1];
+        if (base64Data) {
+          const buffer = Buffer.from(base64Data, "base64");
+          const pngBuffer = await sharp(buffer).png().toBuffer();
+          logo = `data:image/png;base64,${pngBuffer.toString("base64")}`;
+        }
+      } catch (e) {
+        console.error("Failed to convert logo to PNG:", e);
+      }
+    }
 
     if (!text) {
       return new Response("Missing text", { status: 400 });
@@ -146,6 +251,7 @@ export async function POST(request: NextRequest) {
     let textColor = isDark ? "white" : "#111827"; // text-gray-900
     let borderColor = isDark ? "#374151" : "#e5e7eb"; // border-gray-700 : border-gray-200
     let shadow = "0 25px 50px -12px rgba(0, 0, 0, 0.25)"; // shadow-2xl
+    let footerBorder = isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)";
 
     if (cardStyle === "glass") {
       // Sync with SlidePreview: bg-white/60 (0.6) vs bg-gray-900/60 (0.6)
@@ -270,7 +376,20 @@ export async function POST(request: NextRequest) {
               </div>
 
               <div style={{ display: "flex", opacity: 0.7 }}>
-                {PlatformIcon(iconColor)}
+                {logo ? (
+                  <img
+                    src={logo}
+                    width={s(24)}
+                    height={s(24)}
+                    style={{
+                      borderRadius: "50%",
+                      objectFit: "contain",
+                    }}
+                    alt=""
+                  />
+                ) : (
+                  PlatformIcon(iconColor)
+                )}
               </div>
             </div>
           )}
@@ -284,38 +403,153 @@ export async function POST(request: NextRequest) {
               flex: 1,
             }}
           >
+            {/* User Header */}
             <div
               style={{
+                display: "flex",
+                alignItems: "center",
+                gap: s(12),
+                marginBottom: s(24),
+              }}
+            >
+              <div
+                style={{
+                  width: s(48),
+                  height: s(48),
+                  borderRadius: "50%",
+                  backgroundColor: "#ffedd5",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  overflow: "hidden",
+                }}
+              >
+                <img
+                  alt="avatar"
+                  src={avatarSrc}
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
+              </div>
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                <span
+                  style={{ fontWeight: 700, fontSize: s(18), color: textColor }}
+                >
+                  {safeAuthor.name}
+                </span>
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
                 fontSize: fontSizePx,
                 color: textColor,
                 lineHeight: 1.6, // leading-relaxed
                 whiteSpace: "pre-wrap",
                 fontWeight: 500,
                 flex: 1,
+                marginBottom: s(24),
               }}
             >
               {text}
             </div>
 
-            {logo && (
+            {/* Footer Meta */}
+            {showFooter && (
               <div
                 style={{
+                  marginTop: "auto",
+                  paddingTop: s(16),
+                  borderTop: `1px solid ${footerBorder}`,
                   display: "flex",
-                  justifyContent: "flex-end",
-                  marginTop: s(24), // mt-6 (24px)
+                  flexDirection: "column",
+                  width: "100%",
                 }}
               >
-                <img
-                  src={logo}
-                  width={s(40)} // w-10 (40px)
-                  height={s(40)}
+                <div
                   style={{
-                    objectFit: "cover",
-                    borderRadius: "50%",
-                    border: `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`,
+                    color: "#6b7280",
+                    fontSize: s(14),
+                    marginBottom: s(12),
+                    fontWeight: 500,
+                    display: "flex",
                   }}
-                  alt=""
-                />
+                >
+                  {safeDate}
+                </div>
+                <div
+                  style={{ display: "flex", gap: s(24), alignItems: "center" }}
+                >
+                  <div
+                    style={{ display: "flex", alignItems: "center", gap: s(8) }}
+                  >
+                    <div style={{ color: "#6b7280", display: "flex" }}>
+                      {ICONS.reply("#6b7280")}
+                    </div>
+                    <span
+                      style={{
+                        color: textColor,
+                        fontWeight: 700,
+                        fontSize: s(14),
+                      }}
+                    >
+                      {formatNumber(safeStats.replies)}{" "}
+                      <span
+                        style={{
+                          fontWeight: 400,
+                          color: "#6b7280",
+                          marginLeft: s(4),
+                        }}
+                      ></span>
+                    </span>
+                  </div>
+                  <div
+                    style={{ display: "flex", alignItems: "center", gap: s(8) }}
+                  >
+                    <div style={{ color: "#6b7280", display: "flex" }}>
+                      {ICONS.share("#6b7280")}
+                    </div>
+                    <span
+                      style={{
+                        color: textColor,
+                        fontWeight: 700,
+                        fontSize: s(14),
+                      }}
+                    >
+                      {formatNumber(safeStats.shares)}{" "}
+                      <span
+                        style={{
+                          fontWeight: 400,
+                          color: "#6b7280",
+                          marginLeft: s(4),
+                        }}
+                      ></span>
+                    </span>
+                  </div>
+                  <div
+                    style={{ display: "flex", alignItems: "center", gap: s(8) }}
+                  >
+                    <div style={{ color: "#6b7280", display: "flex" }}>
+                      {ICONS.heart("#6b7280")}
+                    </div>
+                    <span
+                      style={{
+                        color: textColor,
+                        fontWeight: 700,
+                        fontSize: s(14),
+                      }}
+                    >
+                      {formatNumber(safeStats.likes)}{" "}
+                      <span
+                        style={{
+                          fontWeight: 400,
+                          color: "#6b7280",
+                          marginLeft: s(4),
+                        }}
+                      ></span>
+                    </span>
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -358,4 +592,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

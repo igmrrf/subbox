@@ -9,10 +9,14 @@ export async function generateImage(
     platform: theme.platform,
     mode: theme.mode,
     fontSize: theme.fontSize,
-    windowChrome: String(theme.windowChrome),
+    windowChrome: theme.windowChrome,
     cardStyle: theme.cardStyle,
+    showFooter: theme.showFooter ?? true,
     ...(theme?.logo && { logo: theme.logo }),
     ...(theme?.background && { background: theme.background }),
+    author: theme.author || slide.author,
+    stats: slide.stats,
+    date: slide.date,
   };
 
   const response = await fetch("/api/generate", {

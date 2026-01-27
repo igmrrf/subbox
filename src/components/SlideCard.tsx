@@ -1,23 +1,27 @@
 "use client";
 
-import { useState, type ClipboardEvent } from "react";
-import { type Slide, useDeckStore } from "@/store/deck-store";
-import {
-  Trash2,
-  Copy,
-  Eye,
-  PenLine,
-  Download,
-  ClipboardCopy,
-  Link2,
-} from "lucide-react";
-import { motion } from "framer-motion";
-import { SlidePreview } from "./SlidePreview";
 import { saveAs } from "file-saver";
-import { generateImage } from "@/utils/generateImage";
-import { SmartPasteModal } from "./SmartPasteModal";
-import { splitTextContent, PLATFORM_LIMITS } from "@/utils/textUtils";
+import { motion } from "framer-motion";
+import {
+  ClipboardCopy,
+  Copy,
+  Download,
+  Eye,
+  Heart,
+  Link2,
+  MessageCircle,
+  PenLine,
+  RefreshCw,
+  Repeat2,
+  Trash2,
+} from "lucide-react";
+import { type ClipboardEvent, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
+import { type Slide, useDeckStore } from "@/store/deck-store";
+import { generateImage } from "@/utils/generateImage";
+import { PLATFORM_LIMITS, splitTextContent } from "@/utils/textUtils";
+import { SlidePreview } from "./SlidePreview";
+import { SmartPasteModal } from "./SmartPasteModal";
 
 interface SlideCardProps {
   slide: Slide;
@@ -38,6 +42,16 @@ export function SlideCard({ slide, index }: SlideCardProps) {
   const [showPasteModal, setShowPasteModal] = useState(false);
   const [pastedContent, setPastedContent] = useState("");
   const [isUnfurling, setIsUnfurling] = useState(false);
+
+  const randomizeStats = () => {
+    updateSlide(slide.id, {
+      stats: {
+        likes: Math.floor(Math.random() * (50000 - 100 + 1)) + 100,
+        replies: Math.floor(Math.random() * 5000),
+        shares: Math.floor(Math.random() * 10000),
+      },
+    });
+  };
 
   const handleDownload = async () => {
     setIsGenerating(true);
@@ -115,6 +129,9 @@ export function SlideCard({ slide, index }: SlideCardProps) {
       id: uuidv4(),
       content,
       theme: globalTheme.platform,
+      author: slide.author,
+      stats: { ...slide.stats }, // Clone stats or maybe set to 0 for new slides? Clone is probably safer/expected.
+      date: slide.date,
     }));
 
     setSlides(newSlides);
@@ -133,6 +150,13 @@ export function SlideCard({ slide, index }: SlideCardProps) {
   const limit = PLATFORM_LIMITS[globalTheme.platform] || 280;
   const charCount = slide.content.length;
   const isOverLimit = charCount > limit;
+
+  // Ensure defaults for older slides
+  if (!slide.author && typeof window !== "undefined") {
+    // This is a side-effect in render, which is bad, but for quick fix to store...
+    // Better to handle it in the store or just let SlidePreview handle defaults (which it does).
+    // SlidePreview handles it. GenerateImage passes undefined, API needs to handle it.
+  }
 
   return (
     <>
@@ -214,7 +238,13 @@ export function SlideCard({ slide, index }: SlideCardProps) {
 
         {showPreview ? (
           <div className="border border-gray-200 dark:border-gray-700 rounded-md">
-            <SlidePreview content={slide.content} theme={slide.theme} />
+            <SlidePreview
+              content={slide.content}
+              theme={slide.theme}
+              author={slide.author}
+              stats={slide.stats}
+              date={slide.date}
+            />
           </div>
         ) : (
           <div className="relative">
@@ -232,6 +262,76 @@ export function SlideCard({ slide, index }: SlideCardProps) {
             >
               {charCount} / {limit}
             </div>
+          </div>
+        )}
+
+        {!showPreview && (
+          <div className="flex items-center justify-end gap-4 mt-3 px-1">
+            <div
+              className="flex items-center gap-1.5 text-gray-400"
+              title="Replies"
+            >
+              <MessageCircle size={14} />
+              <input
+                type="number"
+                value={slide.stats.replies}
+                onChange={(e) =>
+                  updateSlide(slide.id, {
+                    stats: {
+                      ...slide.stats,
+                      replies: parseInt(e.target.value, 10) || 0,
+                    },
+                  })
+                }
+                className="w-16 bg-transparent border-b border-dashed border-gray-300 dark:border-gray-700 focus:border-blue-500 outline-none text-center text-sm"
+              />
+            </div>
+            <div
+              className="flex items-center gap-1.5 text-gray-400"
+              title="Shares"
+            >
+              <Repeat2 size={14} />
+              <input
+                type="number"
+                value={slide.stats.shares}
+                onChange={(e) =>
+                  updateSlide(slide.id, {
+                    stats: {
+                      ...slide.stats,
+                      shares: parseInt(e.target.value, 10) || 0,
+                    },
+                  })
+                }
+                className="w-16 bg-transparent border-b border-dashed border-gray-300 dark:border-gray-700 focus:border-blue-500 outline-none text-center text-sm"
+              />
+            </div>
+            <div
+              className="flex items-center gap-1.5 text-gray-400"
+              title="Likes"
+            >
+              <Heart size={14} />
+              <input
+                type="number"
+                value={slide.stats.likes}
+                onChange={(e) =>
+                  updateSlide(slide.id, {
+                    stats: {
+                      ...slide.stats,
+                      likes: parseInt(e.target.value, 10) || 0,
+                    },
+                  })
+                }
+                className="w-16 bg-transparent border-b border-dashed border-gray-300 dark:border-gray-700 focus:border-blue-500 outline-none text-center text-sm"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={randomizeStats}
+              className="ml-2 text-gray-400 hover:text-blue-500 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              title="Randomize Stats"
+            >
+              <RefreshCw size={14} />
+            </button>
           </div>
         )}
       </motion.div>

@@ -76,6 +76,7 @@ export function SortableSlideList() {
 
   return (
     <DndContext
+      id="sortable-slides"
       sensors={sensors}
       collisionDetection={closestCenter}
       onDragEnd={handleDragEnd}

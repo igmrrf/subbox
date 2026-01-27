@@ -4,12 +4,13 @@ import clsx from "clsx";
 import { saveAs } from "file-saver";
 import JSZip from "jszip";
 import { DownloadCloud, Menu, Plus, X } from "lucide-react";
-import { useState } from "react";
+import { useLayoutEffect, useState } from "react";
 import { Editor } from "@/components/Editor";
 import { SortableSlideList } from "@/components/SortableSlideList";
 import { ThemeSelector } from "@/components/ThemeSelector";
 import { useDeckStore } from "@/store/deck-store";
 import { generateImage } from "@/utils/generateImage";
+import { clearAllBrowserData } from "@/utils/storage";
 
 export default function Home() {
   const { slides, addSlide, globalTheme } = useDeckStore();
@@ -39,6 +40,14 @@ export default function Home() {
       setIsExporting(false);
     }
   };
+  useLayoutEffect(() => {
+    (async () => {
+      if (!localStorage.getItem("cleared")) {
+        await clearAllBrowserData();
+        localStorage.setItem("cleared", "cleared");
+      }
+    })();
+  });
 
   return (
     <div className="flex h-screen flex-col md:flex-row bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 overflow-hidden">

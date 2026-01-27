@@ -7,6 +7,7 @@ const withPWA = require('next-pwa')({
 
 const nextConfig: NextConfig = {
   /* config options here */
+  serverExternalPackages: ["@resvg/resvg-js"],
   // @ts-ignore - Next.js 16 types might not fully expose this yet or generic type issue
   turbopack: {},
 };

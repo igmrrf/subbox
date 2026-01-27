@@ -1,213 +1,361 @@
-import { ImageResponse } from 'next/og';
-import { NextRequest } from 'next/server';
+import fs from "node:fs";
+import path from "node:path";
+import { type NextRequest, NextResponse } from "next/server";
+import satori from "satori";
+import { Resvg } from "@resvg/resvg-js";
 
-export const runtime = 'edge';
+export const runtime = "nodejs";
+
+// Platform configuration matching SlidePreview.tsx
+const PLATFORM_CONFIG = {
+  twitter: {
+    // bg-gradient-to-br from-blue-400 to-cyan-300
+    background: "linear-gradient(135deg, #60a5fa, #67e8f9)",
+    iconColor: "#60a5fa", // text-blue-400
+  },
+  linkedin: {
+    // bg-gradient-to-br from-blue-700 to-blue-900
+    background: "linear-gradient(135deg, #1d4ed8, #1e3a8a)",
+    iconColor: "#1d4ed8", // text-blue-700
+  },
+  instagram: {
+    // bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-500
+    background: "linear-gradient(45deg, #facc15, #ef4444, #a855f7)",
+    iconColor: "#ec4899", // text-pink-500
+  },
+  tiktok: {
+    background: "black",
+    iconColor: "black",
+  },
+};
 
 // Simple SVG paths for icons
 const ICONS = {
-    twitter: (color: string) => (
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z" />
-        </svg>
-    ),
-    linkedin: (color: string) => (
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
-            <rect x="2" y="9" width="4" height="12" />
-            <circle cx="4" cy="4" r="2" />
-        </svg>
-    ),
-    instagram: (color: string) => (
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
-            <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
-            <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
-        </svg>
-    ),
-    tiktok: (color: string) => (
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" />
-        </svg>
-    )
+  twitter: (color: string) => (
+    <svg
+      width="48"
+      height="48"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z" />
+    </svg>
+  ),
+  linkedin: (color: string) => (
+    <svg
+      width="48"
+      height="48"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
+      <rect x="2" y="9" width="4" height="12" />
+      <circle cx="4" cy="4" r="2" />
+    </svg>
+  ),
+  instagram: (color: string) => (
+    <svg
+      width="48"
+      height="48"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+      <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+      <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+    </svg>
+  ),
+  tiktok: (color: string) => (
+    <svg
+      width="48"
+      height="48"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+      <path d="M12 18h.01" />
+    </svg>
+  ),
 };
 
-export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const text = searchParams.get('text') || '';
-  const platform = searchParams.get('platform') || 'twitter';
-  const mode = searchParams.get('mode') || 'light';
-  const fontSize = searchParams.get('fontSize') || 'large';
-  const logo = searchParams.get('logo');
-  const windowChrome = searchParams.get('windowChrome') === 'true';
-  const cardStyle = searchParams.get('cardStyle') || 'solid';
-  const backgroundParam = searchParams.get('background');
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
 
-  if (!text) {
-    return new Response('Missing text', { status: 400 });
-  }
+    const {
+      text = "",
+      platform = "twitter",
+      mode = "light",
+      fontSize = "large",
+      logo,
+      windowChrome = false,
+      cardStyle = "solid",
+      background: backgroundParam,
+    } = body;
 
-  // Canvas Dimensions
-  let width = 1200;
-  let height = 675; // 16:9 default (Twitter)
-  
-  // Background Styles
-  // Default platform backgrounds
-  let background = 'linear-gradient(to bottom right, #60a5fa, #2563eb)';
+    if (!text) {
+      return new Response("Missing text", { status: 400 });
+    }
 
-  if (platform === 'linkedin') {
-    width = 1080;
-    height = 1350; // 4:5
-    background = 'linear-gradient(to bottom right, #1d4ed8, #1e3a8a)';
-  } else if (platform === 'instagram') {
-    width = 1080;
-    height = 1080; // 1:1
-    background = 'linear-gradient(to bottom right, #facc15, #ef4444, #a855f7)';
-  } else if (platform === 'tiktok') {
-    width = 1080;
-    height = 1920; // 9:16
-    background = 'black';
-  } else if (platform === 'twitter') {
-      background = 'linear-gradient(to bottom right, #60a5fa, #22d3ee)';
-  }
+    // Canvas Dimensions & Scaling
+    let width = 1200;
+    let height = 675; // 16:9 default (Twitter)
 
-  // Override with custom background if present
-  if (backgroundParam) {
+    const platformConfig =
+      PLATFORM_CONFIG[platform as keyof typeof PLATFORM_CONFIG] ||
+      PLATFORM_CONFIG.twitter;
+    let background = platformConfig.background;
+
+    if (platform === "linkedin") {
+      width = 1080;
+      height = 1350; // 4:5
+    } else if (platform === "instagram") {
+      width = 1080;
+      height = 1080; // 1:1
+    } else if (platform === "tiktok") {
+      width = 1080;
+      height = 1920; // 9:16
+    }
+
+    if (backgroundParam) {
       background = backgroundParam;
-  }
+    }
 
-  // Card Styles
-  const isDark = mode === 'dark';
-  let cardBg = isDark ? 'rgba(17, 24, 39, 0.95)' : 'rgba(255, 255, 255, 0.95)';
-  let textColor = isDark ? 'white' : '#111827';
-  let borderColor = isDark ? '#374151' : '#e5e7eb';
-  let shadow = '0 25px 50px -12px rgba(0, 0, 0, 0.25)';
+    // Card Styles
+    const isDark = mode === "dark";
+    // Sync with SlidePreview: bg-white/90 (0.9) vs bg-gray-900/90 (0.9)
+    let cardBg = isDark
+      ? "rgba(17, 24, 39, 0.9)" // bg-gray-900/90
+      : "rgba(255, 255, 255, 0.9)"; // bg-white/90
+    let textColor = isDark ? "white" : "#111827"; // text-gray-900
+    let borderColor = isDark ? "#374151" : "#e5e7eb"; // border-gray-700 : border-gray-200
+    let shadow = "0 25px 50px -12px rgba(0, 0, 0, 0.25)"; // shadow-2xl
 
-  if (cardStyle === 'glass') {
-      cardBg = isDark ? 'rgba(17, 24, 39, 0.6)' : 'rgba(255, 255, 255, 0.6)';
-  } else if (cardStyle === 'flat') {
-      cardBg = isDark ? '#111827' : '#ffffff';
-      shadow = 'none';
-  }
+    if (cardStyle === "glass") {
+      // Sync with SlidePreview: bg-white/60 (0.6) vs bg-gray-900/60 (0.6)
+      cardBg = isDark ? "rgba(17, 24, 39, 0.6)" : "rgba(255, 255, 255, 0.6)";
+    } else if (cardStyle === "flat") {
+      cardBg = isDark ? "#111827" : "#ffffff";
+      shadow = "none";
+    }
 
-  // Adaptive Font Sizing Logic
-  const textLength = text.length;
-  let fontSizePx = 40; // Default base
+    // Adaptive Font Sizing Logic - Scaled up ~2.4x from Tailwind
+    const textLength = text.length;
+    const SCALE = 2.4;
+    const s = (val: number) => Math.round(val * SCALE);
 
-  if (fontSize === 'huge') {
-      if (textLength > 100) fontSizePx = 48; // down from 60
-      else if (textLength > 200) fontSizePx = 36;
-      else fontSizePx = 60;
-  } else if (fontSize === 'large') {
-      if (textLength > 150) fontSizePx = 32; // down from 40
-      else if (textLength > 250) fontSizePx = 28;
-      else fontSizePx = 40;
-  } else { // medium
-      if (textLength > 200) fontSizePx = 24;
-      else fontSizePx = 28;
-  }
+    let fontSizePx = s(30); // Default text-3xl (30px)
 
-  // Icon
-  // @ts-ignore
-  const PlatformIcon = ICONS[platform] || ICONS.twitter;
-  const iconColor = isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.7)';
+    if (fontSize === "huge") {
+      if (textLength > 200)
+        fontSizePx = s(20); // text-xl (20px)
+      else if (textLength > 100)
+        fontSizePx = s(24); // text-2xl (24px)
+      else fontSizePx = s(30); // text-3xl (30px)
+    } else if (fontSize === "large") {
+      if (textLength > 250)
+        fontSizePx = s(16); // text-base (16px)
+      else if (textLength > 150)
+        fontSizePx = s(18); // text-lg (18px)
+      else fontSizePx = s(20); // text-xl (20px)
+    } else {
+      // medium
+      if (textLength > 200)
+        fontSizePx = s(14); // text-sm (14px)
+      else fontSizePx = s(16); // text-base (16px)
+    }
 
-  return new ImageResponse(
-    (
-      <div
-        style={{
-          height: '100%',
-          width: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundImage: background.includes('gradient') ? background : undefined,
-          backgroundColor: !background.includes('gradient') ? background : undefined,
-          padding: 80, // Outer padding
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            backgroundColor: cardBg,
-            borderRadius: 24,
-            boxShadow: shadow,
-            border: cardStyle !== 'flat' ? `1px solid ${borderColor}` : undefined,
-            width: '100%',
-            maxWidth: '100%',
-            overflow: 'hidden',
-          }}
-        >
+    // Icon
+    // @ts-ignore
+    const PlatformIcon = ICONS[platform] || ICONS.twitter;
+    // SlidePreview uses platform color for icon in chrome
+    const iconColor = platformConfig.iconColor;
+
+    const fontData = await fs.promises.readFile(
+      path.join(process.cwd(), "public", "Inter-Medium.woff"),
+    );
+
+    // Padding scaling
+    // Outer: p-8 (32px) * 2.4 = ~77px
+    const outerPadding = s(32);
+    // Inner: p-6 (24px) * 2.4 = ~58px
+    const innerPadding = s(24);
+
+    const containerStyle: React.CSSProperties = {
+      height: "100%",
+      width: "100%",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: outerPadding,
+      fontFamily: '"Inter"',
+      ...(background.includes("gradient")
+        ? { backgroundImage: background }
+        : { backgroundColor: background }),
+    };
+
+    const innerCardStyle: React.CSSProperties = {
+      display: "flex",
+      flexDirection: "column",
+      backgroundColor: cardBg,
+      borderRadius: s(12), // rounded-xl (12px)
+      boxShadow: shadow,
+      width: "100%",
+      height: "100%",
+      maxWidth: "100%",
+      overflow: "hidden",
+      ...(cardStyle !== "flat" ? { border: `1px solid ${borderColor}` } : {}),
+    };
+
+    const svg = await satori(
+      <div style={containerStyle}>
+        <div style={innerCardStyle}>
           {/* Window Chrome */}
           {windowChrome && (
-              <div style={{
-                  height: 80, 
-                  width: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  paddingLeft: 32,
-                  paddingRight: 32,
-                  borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}`,
-              }}>
-                  <div style={{ display: 'flex', gap: 16 }}>
-                      <div style={{ width: 16, height: 16, borderRadius: '50%', backgroundColor: '#FF5F56' }} />
-                      <div style={{ width: 16, height: 16, borderRadius: '50%', backgroundColor: '#FFBD2E' }} />
-                      <div style={{ width: 16, height: 16, borderRadius: '50%', backgroundColor: '#27C93F' }} />
-                  </div>
-                  
-                  <div style={{ display: 'flex' }}>
-                      {PlatformIcon(iconColor)}
-                  </div>
+            <div
+              style={{
+                height: s(48), // h-12 (48px)
+                width: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                paddingLeft: s(16), // px-4 (16px)
+                paddingRight: s(16),
+                borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)"}`,
+              }}
+            >
+              <div style={{ display: "flex", gap: s(8) }}>
+                {" "}
+                {/* gap-2 (8px) */}
+                <div
+                  style={{
+                    width: s(12), // w-3 (12px)
+                    height: s(12),
+                    borderRadius: "50%",
+                    backgroundColor: "#FF5F56",
+                  }}
+                />
+                <div
+                  style={{
+                    width: s(12),
+                    height: s(12),
+                    borderRadius: "50%",
+                    backgroundColor: "#FFBD2E",
+                  }}
+                />
+                <div
+                  style={{
+                    width: s(12),
+                    height: s(12),
+                    borderRadius: "50%",
+                    backgroundColor: "#27C93F",
+                  }}
+                />
               </div>
+
+              <div style={{ display: "flex", opacity: 0.7 }}>
+                {PlatformIcon(iconColor)}
+              </div>
+            </div>
           )}
 
           {/* Content */}
-          <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              padding: 60,
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              padding: innerPadding,
               flex: 1,
-          }}>
-               <div style={{
-                   fontSize: fontSizePx,
-                   color: textColor,
-                   lineHeight: 1.5,
-                   whiteSpace: 'pre-wrap',
-                   fontWeight: 500,
-                   flex: 1,
-               }}>
-                   {text}
-               </div>
+            }}
+          >
+            <div
+              style={{
+                fontSize: fontSizePx,
+                color: textColor,
+                lineHeight: 1.6, // leading-relaxed
+                whiteSpace: "pre-wrap",
+                fontWeight: 500,
+                flex: 1,
+              }}
+            >
+              {text}
+            </div>
 
-               {/* User Logo - Bottom Right */}
-               {logo && (
-                   <div style={{
-                       display: 'flex',
-                       justifyContent: 'flex-end',
-                       marginTop: 40,
-                   }}>
-                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                       <img 
-                           src={logo} 
-                           width="60" 
-                           height="60" 
-                           style={{ 
-                               objectFit: 'cover', 
-                               borderRadius: '50%',
-                               border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`
-                           }} 
-                           alt="" 
-                        />
-                   </div>
-               )}
+            {logo && (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  marginTop: s(24), // mt-6 (24px)
+                }}
+              >
+                <img
+                  src={logo}
+                  width={s(40)} // w-10 (40px)
+                  height={s(40)}
+                  style={{
+                    objectFit: "cover",
+                    borderRadius: "50%",
+                    border: `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`,
+                  }}
+                  alt=""
+                />
+              </div>
+            )}
           </div>
         </div>
-      </div>
-    ),
-    {
-      width,
-      height,
-    }
-  );
+      </div>,
+      {
+        width,
+        height,
+        fonts: [
+          {
+            name: "Inter",
+            data: fontData,
+            style: "normal",
+            weight: 500,
+          },
+        ],
+      },
+    );
+
+    const resvg = new Resvg(svg, {
+      fitTo: {
+        mode: "width",
+        value: width,
+      },
+    });
+    const pngData = resvg.render();
+    const pngBuffer = pngData.asPng();
+
+    return new Response(pngBuffer as unknown as BodyInit, {
+      status: 200,
+      headers: {
+        "Content-Type": "image/png",
+      },
+    });
+  } catch (error) {
+    console.log({ error });
+    return NextResponse.json(
+      { error: "Failed to generate image" },
+      { status: 500 },
+    );
+  }
 }
+

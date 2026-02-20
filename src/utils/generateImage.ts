@@ -5,7 +5,11 @@ export async function generateImage(
   theme: GlobalTheme,
 ): Promise<Blob> {
   const params = {
-    text: slide.content,
+    text: slide.content.primary,
+    secondaryText: slide.content.secondary,
+    layout: slide.layout,
+    type: slide.type,
+    language: slide.settings.language,
     platform: theme.platform,
     mode: theme.mode,
     fontSize: theme.fontSize,

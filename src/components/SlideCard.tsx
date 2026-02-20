@@ -6,22 +6,29 @@ import {
   ClipboardCopy,
   Copy,
   Download,
-  Eye,
   Heart,
   Link2,
   MessageCircle,
-  PenLine,
   RefreshCw,
   Repeat2,
   Trash2,
+  Layout,
+  Code,
+  FileText,
+  Smartphone,
+  Columns,
+  Square,
+  Layers
 } from "lucide-react";
 import { type ClipboardEvent, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
-import { type Slide, useDeckStore } from "@/store/deck-store";
+import { type Slide, type SlideType, type SlideLayout, useDeckStore, type Annotation } from "@/store/deck-store";
 import { generateImage } from "@/utils/generateImage";
 import { PLATFORM_LIMITS, splitTextContent } from "@/utils/textUtils";
+import { detectInputType } from "@/utils/inputDetector";
 import { SlidePreview } from "./SlidePreview";
 import { SmartPasteModal } from "./SmartPasteModal";
+import clsx from "clsx";
 
 interface SlideCardProps {
   slide: Slide;
@@ -37,7 +44,6 @@ export function SlideCard({ slide, index }: SlideCardProps) {
     setSlides,
     setSourceText,
   } = useDeckStore();
-  const [showPreview, setShowPreview] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showPasteModal, setShowPasteModal] = useState(false);
   const [pastedContent, setPastedContent] = useState("");
@@ -57,7 +63,6 @@ export function SlideCard({ slide, index }: SlideCardProps) {
     setIsGenerating(true);
     try {
       const blob = await generateImage(slide, globalTheme);
-      console.log({ blob });
       saveAs(blob, `slide-${index + 1}.png`);
     } catch (e) {
       console.error(e);
@@ -71,7 +76,6 @@ export function SlideCard({ slide, index }: SlideCardProps) {
     setIsGenerating(true);
     try {
       const blob = await generateImage(slide, globalTheme);
-      console.log({ blob });
       await navigator.clipboard.write([
         new ClipboardItem({ [blob.type]: blob }),
       ]);
@@ -97,20 +101,10 @@ export function SlideCard({ slide, index }: SlideCardProps) {
       const data = await res.json();
       if (data.error) throw new Error(data.error);
 
-      // Construct updates
       const updates: Partial<Slide> = {
-        content: data.text || slide.content,
+        content: { ...slide.content, primary: data.text || slide.content.primary },
       };
 
-      // Update Theme/Platform if detected
-      if (data.platform) {
-        updates.theme = data.platform;
-        // Optionally update global theme to match if desired, but usually per-slide is safer?
-        // The user asked for "platform as the logo".
-        // We will update the slide's theme.
-      }
-
-      // Update Author
       if (data.author && (data.author.name || data.author.handle)) {
         updates.author = {
           name: data.author.name || slide.author.name,
@@ -119,7 +113,6 @@ export function SlideCard({ slide, index }: SlideCardProps) {
         };
       }
 
-      // Update Stats
       if (data.stats) {
         updates.stats = {
           likes: data.stats.likes ?? slide.stats.likes,
@@ -137,56 +130,73 @@ export function SlideCard({ slide, index }: SlideCardProps) {
     }
   };
 
-  const handlePaste = (e: ClipboardEvent<HTMLTextAreaElement>) => {
-    const text = e.clipboardData.getData("text");
-    // Threshold check
-    if (text.length > 280 || text.includes("\n\n")) {
-      e.preventDefault();
-      setPastedContent(text);
-      setShowPasteModal(true);
-    }
+  const handleUpdateContent = (primary: string, secondary?: string) => {
+      updateSlide(slide.id, { content: { primary, secondary } });
+  };
+
+  const handleAddAnnotation = (annotation: Annotation) => {
+      updateSlide(slide.id, {
+          annotations: [...(slide.annotations || []), annotation]
+      });
+  };
+
+  const handleRemoveAnnotation = (annotationId: string) => {
+      updateSlide(slide.id, {
+          annotations: (slide.annotations || []).filter(a => a.id !== annotationId)
+      });
   };
 
   const handleConfirmSplit = () => {
-    // Set Source Text for future resizes
     setSourceText(pastedContent);
-
-    // Split based on current platform limit
     const limit = PLATFORM_LIMITS[globalTheme.platform] || 280;
     const chunks = splitTextContent(pastedContent, limit);
 
-    const newSlides = chunks.map((content) => ({
+    const newSlides: Slide[] = chunks.map((content) => ({
       id: uuidv4(),
-      content,
-      theme: globalTheme.platform,
+      type: 'social',
+      layout: 'single',
+      content: { primary: content },
+      settings: {
+          frame: 'macos',
+          theme: globalTheme.platform,
+          padding: 32
+      },
       author: slide.author,
-      stats: { ...slide.stats }, // Clone stats or maybe set to 0 for new slides? Clone is probably safer/expected.
+      stats: { ...slide.stats }, 
       date: slide.date,
+      annotations: []
     }));
 
     setSlides(newSlides);
-
     setShowPasteModal(false);
     setPastedContent("");
   };
 
   const handleCancelSplit = () => {
-    updateSlide(slide.id, { content: slide.content + pastedContent });
+    updateSlide(slide.id, { content: { ...slide.content, primary: slide.content.primary + pastedContent } });
     setSourceText("");
     setShowPasteModal(false);
     setPastedContent("");
   };
 
   const limit = PLATFORM_LIMITS[globalTheme.platform] || 280;
-  const charCount = slide.content.length;
+  const charCount = slide.content.primary?.length || 0;
   const isOverLimit = charCount > limit;
 
-  // Ensure defaults for older slides
-  if (!slide.author && typeof window !== "undefined") {
-    // This is a side-effect in render, which is bad, but for quick fix to store...
-    // Better to handle it in the store or just let SlidePreview handle defaults (which it does).
-    // SlidePreview handles it. GenerateImage passes undefined, API needs to handle it.
-  }
+  // Type Toggle Helpers
+  const TYPES: { id: SlideType; icon: any; label: string }[] = [
+      { id: "social", icon: Smartphone, label: "Social" },
+      { id: "code", icon: Code, label: "Code" },
+      { id: "diff", icon: Columns, label: "Diff" },
+      { id: "text", icon: FileText, label: "Text" },
+  ];
+
+  // Layout Toggle Helpers
+  const LAYOUTS: { id: SlideLayout; icon: any; label: string }[] = [
+      { id: "single", icon: Square, label: "Single" },
+      { id: "split", icon: Columns, label: "Split" },
+      { id: "stack", icon: Layers, label: "Stack" },
+  ];
 
   return (
     <>
@@ -204,17 +214,49 @@ export function SlideCard({ slide, index }: SlideCardProps) {
         className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700"
       >
         <div className="flex justify-between items-center mb-4">
-          <span className="font-semibold text-gray-500">Slide {index + 1}</span>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setShowPreview(!showPreview)}
-              className="text-gray-500 hover:text-blue-500 p-1 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded cursor-pointer"
-              title={showPreview ? "Edit Mode" : "Preview Mode"}
-            >
-              {showPreview ? <PenLine size={16} /> : <Eye size={16} />}
-            </button>
+          <div className="flex items-center gap-3">
+              <span className="font-semibold text-gray-500">Slide {index + 1}</span>
+              
+              {/* Type Switcher */}
+              <div className="flex bg-gray-100 dark:bg-gray-700 rounded-md p-0.5">
+                  {TYPES.map(t => (
+                      <button
+                        key={t.id}
+                        onClick={() => updateSlide(slide.id, { type: t.id })}
+                        className={clsx(
+                            "p-1.5 rounded text-xs flex items-center gap-1 transition-all",
+                            slide.type === t.id 
+                                ? "bg-white dark:bg-gray-600 shadow-sm text-blue-600 dark:text-blue-400" 
+                                : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                        )}
+                        title={t.label}
+                      >
+                          <t.icon size={14} />
+                      </button>
+                  ))}
+              </div>
 
+              {/* Layout Switcher */}
+              <div className="flex bg-gray-100 dark:bg-gray-700 rounded-md p-0.5">
+                  {LAYOUTS.map(l => (
+                      <button
+                        key={l.id}
+                        onClick={() => updateSlide(slide.id, { layout: l.id })}
+                        className={clsx(
+                            "p-1.5 rounded text-xs flex items-center gap-1 transition-all",
+                            slide.layout === l.id 
+                                ? "bg-white dark:bg-gray-600 shadow-sm text-blue-600 dark:text-blue-400" 
+                                : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                        )}
+                        title={l.label}
+                      >
+                          <l.icon size={14} />
+                      </button>
+                  ))}
+              </div>
+          </div>
+
+          <div className="flex gap-2">
             <button
               type="button"
               onClick={handleUnfurl}
@@ -225,7 +267,6 @@ export function SlideCard({ slide, index }: SlideCardProps) {
               <Link2 size={16} />
             </button>
 
-            {/* Export actions */}
             <button
               type="button"
               onClick={handleCopyImage}
@@ -266,37 +307,29 @@ export function SlideCard({ slide, index }: SlideCardProps) {
           </div>
         </div>
 
-        {showPreview ? (
-          <div className="border border-gray-200 dark:border-gray-700 rounded-md">
+        <div className="border border-gray-200 dark:border-gray-700 rounded-md">
             <SlidePreview
               content={slide.content}
-              theme={slide.theme}
+              theme={slide.settings?.theme || globalTheme.platform}
+              type={slide.type}
+              language={slide.settings?.language}
+              layout={slide.layout}
               author={slide.author}
               stats={slide.stats}
               date={slide.date}
+              annotations={slide.annotations}
+              onUpdateContent={handleUpdateContent}
+              onAddAnnotation={handleAddAnnotation}
+              onRemoveAnnotation={handleRemoveAnnotation}
             />
-          </div>
-        ) : (
-          <div className="relative">
-            <textarea
-              value={slide.content}
-              onChange={(e) =>
-                updateSlide(slide.id, { content: e.target.value })
-              }
-              onPaste={handlePaste}
-              className="w-full h-64 p-3 bg-gray-50 dark:bg-gray-900 rounded-md border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-gray-900 dark:text-gray-100 font-sans text-lg"
-              placeholder="Enter your text here..."
-            />
-            <div
-              className={`absolute bottom-2 right-2 text-xs ${isOverLimit ? "text-red-500 font-bold" : "text-gray-400"}`}
-            >
-              {charCount} / {limit}
-            </div>
-          </div>
-        )}
+        </div>
 
-        {!showPreview && (
-          <div className="flex items-center justify-end gap-4 mt-3 px-1">
+        <div className="flex items-center justify-between mt-3 px-1">
+           <div className={`text-xs ${isOverLimit ? "text-red-500 font-bold" : "text-gray-400"}`}>
+              {charCount} / {limit}
+           </div>
+
+          <div className="flex items-center gap-4">
             <div
               className="flex items-center gap-1.5 text-gray-400"
               title="Replies"
@@ -363,7 +396,7 @@ export function SlideCard({ slide, index }: SlideCardProps) {
               <RefreshCw size={14} />
             </button>
           </div>
-        )}
+        </div>
       </motion.div>
     </>
   );

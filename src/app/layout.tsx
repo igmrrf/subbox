@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Subbox",
+  title: "TicPic",
   description: "Turn text into social media graphics",
 };
 

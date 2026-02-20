@@ -12,10 +12,15 @@ import {
   User,
   Wand2,
   X,
+  LayoutTemplate,
+  Monitor,
+  Maximize,
+  Minimize,
 } from "lucide-react";
 import { useState } from "react";
 import { PRESET_AVATARS } from "@/constants/avatars";
-import { Author, useDeckStore } from "@/store/deck-store";
+import { Author, useDeckStore, type SlideFrame } from "@/store/deck-store";
+import { extractColors } from "@/utils/colorExtractor";
 
 const PLATFORMS = [
   { id: "twitter", label: "Twitter", icon: Twitter },
@@ -23,6 +28,13 @@ const PLATFORMS = [
   { id: "instagram", label: "Instagram", icon: Instagram },
   { id: "tiktok", label: "TikTok", icon: Smartphone },
 ] as const;
+
+const FRAMES: { id: SlideFrame; label: string; icon: any }[] = [
+    { id: "macos", label: "MacOS", icon: LayoutTemplate },
+    { id: "windows", label: "Windows", icon: Monitor },
+    { id: "phone", label: "Phone", icon: Smartphone },
+    { id: "none", label: "None", icon: Maximize },
+];
 
 const PRESET_GRADIENTS = [
   "linear-gradient(to bottom right, #f472b6, #d8b4fe, #818cf8)", // Sunset
@@ -43,12 +55,28 @@ export function ThemeSelector() {
 
   const currentAuthor = globalTheme.author || Author;
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setGlobalTheme({ logo: reader.result as string });
+      reader.onloadend = async () => {
+        const logoSrc = reader.result as string;
+        
+        // Extract colors
+        try {
+            const colors = await extractColors(logoSrc);
+            setGlobalTheme({ 
+                logo: logoSrc,
+                brandColors: colors,
+                // Automatically set a gradient from the first two colors if available
+                background: colors.length >= 2 
+                    ? `linear-gradient(135deg, ${colors[0]}, ${colors[1]})` 
+                    : colors[0] ? colors[0] : undefined
+            });
+        } catch (error) {
+            console.error("Failed to extract colors", error);
+            setGlobalTheme({ logo: logoSrc });
+        }
       };
       reader.readAsDataURL(file);
     }
@@ -189,10 +217,6 @@ export function ThemeSelector() {
               type="button"
               key={p.id}
               onClick={() => {
-                setGlobalTheme({ platform: p.id, background: undefined }); // Reset bg on platform switch? Or keep?
-                // Usually user expects platform theme defaults unless explicit override.
-                // Let's keep override if it was explicitly set, but here maybe we want to allow "resetting" easily.
-                // For now, let's NOT reset background automatically to allow "applying twitter layout to my custom purple bg".
                 setGlobalTheme({ platform: p.id });
               }}
               className={clsx(
@@ -206,6 +230,34 @@ export function ThemeSelector() {
               <p.icon size={20} />
             </button>
           ))}
+        </div>
+      </div>
+
+      <div>
+        <label
+          htmlFor="frame-selection"
+          className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block"
+        >
+          Frame Style
+        </label>
+        <div id="frame-selection" className="flex gap-2 text-sm bg-gray-100 dark:bg-gray-800 p-1 rounded-lg mb-4">
+            {FRAMES.map((f) => (
+                <button
+                    type="button"
+                    key={f.id}
+                    onClick={() => setGlobalTheme({ frameStyle: f.id })}
+                    className={clsx(
+                        "flex-1 py-1 px-2 rounded-md capitalize transition-all cursor-pointer text-xs flex items-center justify-center gap-1",
+                        globalTheme.frameStyle === f.id
+                            ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100 font-medium"
+                            : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                    )}
+                    title={f.label}
+                >
+                    <f.icon size={14} />
+                    <span className="hidden sm:inline">{f.label}</span>
+                </button>
+            ))}
         </div>
       </div>
 
@@ -239,35 +291,6 @@ export function ThemeSelector() {
 
         {/* Toggles */}
         <div className="space-y-3 mb-4">
-          <div className="flex items-center justify-between">
-            <label
-              htmlFor="window-chrome"
-              className="text-xs font-semibold text-gray-500 uppercase tracking-wider block"
-            >
-              Window Chrome
-            </label>
-            <button
-              id="window-chrome"
-              type="button"
-              onClick={() =>
-                setGlobalTheme({ windowChrome: !globalTheme.windowChrome })
-              }
-              className={clsx(
-                "w-10 h-6 rounded-full transition-colors relative cursor-pointer",
-                globalTheme.windowChrome
-                  ? "bg-blue-500"
-                  : "bg-gray-300 dark:bg-gray-700",
-              )}
-            >
-              <div
-                className={clsx(
-                  "absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform",
-                  globalTheme.windowChrome && "translate-x-4",
-                )}
-              />
-            </button>
-          </div>
-
           <div className="flex items-center justify-between">
             <label
               htmlFor="show-footer"
@@ -383,6 +406,24 @@ export function ThemeSelector() {
             id="background-selection"
             className="grid grid-cols-6 gap-2 mb-3"
           >
+            {/* Show Brand Colors first if available */}
+            {globalTheme.brandColors?.map((color, i) => (
+                <button
+                    type="button"
+                    key={`brand-${i}`}
+                    onClick={() => setGlobalTheme({ background: color })}
+                    className={clsx(
+                        "w-full aspect-square rounded-full border hover:scale-110 transition-transform",
+                        globalTheme.background === color
+                            ? "ring-2 ring-blue-500 ring-offset-2"
+                            : "border-gray-200",
+                    )}
+                    style={{ background: color }}
+                    aria-label={`Brand Color ${i + 1}`}
+                    title="Brand Color"
+                />
+            ))}
+
             {PRESET_GRADIENTS.map((bg, i) => (
               <button
                 type="button"
@@ -444,7 +485,7 @@ export function ThemeSelector() {
             />
             <button
               type="button"
-              onClick={() => setGlobalTheme({ logo: undefined })}
+              onClick={() => setGlobalTheme({ logo: undefined, brandColors: [] })}
               className="absolute top-0 right-0 bg-red-500 text-white p-0.5 rounded-bl-md hover:bg-red-600 cursor-pointer"
             >
               <X size={12} />

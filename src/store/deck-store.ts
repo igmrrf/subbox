@@ -3,16 +3,53 @@ import { v4 as uuidv4 } from "uuid";
 import { persist } from "zustand/middleware";
 import { splitTextContent, PLATFORM_LIMITS } from "@/utils/textUtils";
 import { clearAllBrowserData } from "@/utils/storage";
+
 export const Author = {
   name: "Subbox",
   handle: "@subbox",
   avatar: "/user.webp",
 };
 
+export type SlideType = "code" | "social" | "text" | "diff" | "hybrid";
+export type SlideLayout = "single" | "split" | "stack";
+export type SlideFrame = "macos" | "windows" | "phone" | "none";
+
+export interface SlideContent {
+  primary: string;
+  secondary?: string;
+}
+
+export interface SlideSettings {
+  frame: SlideFrame;
+  background?: string;
+  language?: string; // For code/hybrid
+  theme: string; // Platform theme (twitter, etc) or code theme
+  padding: number;
+  brandColors?: string[];
+}
+
+export interface Annotation {
+  id: string;
+  type: "arrow" | "circle" | "box" | "text" | "highlight";
+  x: number;
+  y: number;
+  width?: number;
+  height?: number;
+  color?: string;
+  content?: string; // For text annotation
+  points?: number[]; // For arrow/line path
+  rotation?: number;
+}
+
 export interface Slide {
   id: string;
-  content: string;
-  theme: string;
+  type: SlideType;
+  layout: SlideLayout;
+  content: SlideContent;
+  settings: SlideSettings;
+  annotations: Annotation[];
+  
+  // "Social" specific fields (kept at root for now for easier migration/access)
   author: {
     name: string;
     handle: string;
@@ -31,16 +68,18 @@ export interface GlobalTheme {
   mode: "light" | "dark";
   fontSize: "medium" | "large" | "huge";
   logo?: string;
-  windowChrome: boolean;
+  windowChrome: boolean; // Keeping for backward compat, but UI should use frameStyle
+  frameStyle: SlideFrame;
   cardStyle: "glass" | "solid" | "flat";
   autoSplit: boolean;
-  background?: string; // Custom CSS background (color or gradient)
+  background?: string;
   author?: {
     name: string;
     handle: string;
     avatar: string;
   };
   showFooter: boolean;
+  brandColors: string[];
 }
 
 const INITIAL_THEME: GlobalTheme = {
@@ -48,17 +87,46 @@ const INITIAL_THEME: GlobalTheme = {
   mode: "light",
   fontSize: "large",
   windowChrome: true,
+  frameStyle: "macos",
   cardStyle: "solid",
   autoSplit: true,
   showFooter: true,
+  brandColors: ["#3B82F6", "#10B981"], // Default brand colors
 };
+
+const generateRandomStats = () => ({
+  likes: Math.floor(Math.random() * (50000 - 100 + 1)) + 100,
+  replies: Math.floor(Math.random() * 5000),
+  shares: Math.floor(Math.random() * 10000),
+});
+
+const createNewSlide = (content: string = ""): Slide => ({
+  id: uuidv4(),
+  type: "social", // Default to social
+  layout: "single",
+  content: { primary: content },
+  settings: {
+    frame: "macos",
+    theme: "twitter",
+    padding: 32,
+  },
+  annotations: [],
+  author: Author,
+  stats: generateRandomStats(),
+  date: new Date().toLocaleDateString("en-GB", {
+    hour: "numeric",
+    minute: "numeric",
+    hour12: true,
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }),
+});
 
 const INITIAL_SLIDES: Slide[] = [
   {
+    ...createNewSlide("Welcome to Subbox!"),
     id: "default-slide",
-    content: "Welcome to Subbox!",
-    theme: "twitter",
-    author: Author,
     stats: {
       likes: 4200,
       replies: 128,
@@ -75,18 +143,14 @@ const INITIAL_SLIDES: Slide[] = [
   },
 ];
 
-const generateRandomStats = () => ({
-  likes: Math.floor(Math.random() * (50000 - 100 + 1)) + 100,
-  replies: Math.floor(Math.random() * 5000),
-  shares: Math.floor(Math.random() * 10000),
-});
-
 interface DeckState {
   slides: Slide[];
   globalTheme: GlobalTheme;
   sourceText: string;
+  
+  // Actions
   addSlide: () => void;
-  updateSlide: (id: string, updates: Partial<Slide>) => void;
+  updateSlide: (id: string, updates: Partial<Slide> | Partial<SlideSettings> | Partial<SlideContent>) => void;
   removeSlide: (id: string) => void;
   setSlides: (slides: Slide[]) => void;
   duplicateSlide: (id: string) => void;
@@ -115,50 +179,35 @@ export const useDeckStore = create<DeckState>()(
 
       addSlide: () =>
         set((state) => ({
-          slides: [
-            ...state.slides,
-            {
-              id: uuidv4(),
-              content: "",
-              theme: "twitter",
-              author: Author,
-              stats: generateRandomStats(),
-              date: new Date().toLocaleDateString("en-GB", {
-                hour: "numeric",
-                minute: "numeric",
-                hour12: true,
-                day: "numeric",
-                month: "short",
-                year: "numeric",
-              }),
-            },
-          ],
+          slides: [...state.slides, createNewSlide()],
         })),
 
       addSlides: (contents) =>
         set((state) => ({
           slides: [
             ...state.slides,
-            ...contents.map((content) => ({
-              id: uuidv4(),
-              content,
-              theme: "twitter",
-              author: Author,
-              stats: generateRandomStats(),
-              date: new Date().toLocaleDateString("en-GB", {
-                day: "numeric",
-                month: "short",
-                year: "numeric",
-              }),
-            })),
+            ...contents.map((c) => createNewSlide(c)),
           ],
         })),
 
       updateSlide: (id, updates) =>
         set((state) => ({
-          slides: state.slides.map((slide) =>
-            slide.id === id ? { ...slide, ...updates } : slide,
-          ),
+          slides: state.slides.map((slide) => {
+            if (slide.id !== id) return slide;
+            
+            // Handle nested updates for content/settings if passed flat (convenience)
+            // or if passed as nested objects
+            // Actually, let's keep it simple: caller must match structure OR we merge deeply.
+            // For now, simple shallow merge of root props. 
+            // If caller wants to update content, they pass { content: { ...slide.content, primary: 'new' } }
+            // But we can be smarter.
+            
+            const newSlide = { ...slide, ...updates };
+            
+            // Deep merge content if it's a partial update? 
+            // This type signature is a bit loose, let's trust typescript.
+            return newSlide as Slide;
+          }),
         })),
 
       removeSlide: (id) =>
@@ -172,9 +221,14 @@ export const useDeckStore = create<DeckState>()(
         set((state) => {
           const index = state.slides.findIndex((s) => s.id === id);
           if (index === -1) return state;
+          
           const slideToClone = state.slides[index];
-          // Duplicate should clone stats, not randomize
-          const newSlide = { ...slideToClone, id: uuidv4() };
+          const newSlide = { 
+            ...slideToClone, 
+            id: uuidv4(),
+            stats: { ...slideToClone.stats } // Clone stats
+          };
+          
           const newSlides = [...state.slides];
           newSlides.splice(index + 1, 0, newSlide);
           return { slides: newSlides };
@@ -199,34 +253,21 @@ export const useDeckStore = create<DeckState>()(
           if (themeUpdates.platform) {
             newSlides = newSlides.map((s) => ({
               ...s,
-              theme: themeUpdates.platform!,
+              settings: { ...s.settings, theme: themeUpdates.platform! },
             }));
           }
 
-          // If platform changed and we have sourceText AND autoSplit is enabled
+          // Auto-split logic
           if (
             themeUpdates.platform &&
             themeUpdates.platform !== state.globalTheme.platform &&
             state.sourceText &&
             newTheme.autoSplit
           ) {
-            // Check newTheme.autoSplit in case it was toggled on same update (unlikely but safe)
-
             const limit = PLATFORM_LIMITS[newTheme.platform] || 280;
             const newContents = splitTextContent(state.sourceText, limit);
 
-            newSlides = newContents.map((content) => ({
-              id: uuidv4(),
-              content,
-              theme: newTheme.platform,
-              author: Author,
-              stats: generateRandomStats(),
-              date: new Date().toLocaleDateString("en-GB", {
-                day: "numeric",
-                month: "short",
-                year: "numeric",
-              }),
-            }));
+            newSlides = newContents.map((content) => createNewSlide(content));
           }
 
           return {
@@ -237,7 +278,9 @@ export const useDeckStore = create<DeckState>()(
       },
     }),
     {
-      name: "subbox-storage",
+      name: "subbox-storage-v2", // Bump version to force reset or handle migration if needed
+      // partialize: (state) => ({ ...state }), 
+      // For now, version bump in key is enough to avoid reading old invalid state
     },
   ),
 );

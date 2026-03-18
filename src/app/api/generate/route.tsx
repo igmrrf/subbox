@@ -4,7 +4,7 @@ import { Resvg } from "@resvg/resvg-js";
 import { type NextRequest, NextResponse } from "next/server";
 import satori from "satori";
 import sharp from "sharp";
-import { BuiltinLanguage, codeToTokens } from "shiki";
+import { codeToTokens } from "shiki";
 import { Author } from "@/store/deck-store";
 
 export const runtime = "nodejs";
@@ -28,7 +28,6 @@ const PLATFORM_CONFIG = {
   },
 };
 
-// Icons (reused from previous step)
 const ICONS = {
   twitter: (color: string) => (
     <svg
@@ -41,7 +40,6 @@ const ICONS = {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <title>twitter</title>
       <path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z" />
     </svg>
   ),
@@ -56,7 +54,6 @@ const ICONS = {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <title>linkedin</title>
       <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
       <rect x="2" y="9" width="4" height="12" />
       <circle cx="4" cy="4" r="2" />
@@ -73,7 +70,6 @@ const ICONS = {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <title>instagram</title>
       <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
       <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
       <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
@@ -90,7 +86,6 @@ const ICONS = {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <title>tiktok</title>
       <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
       <path d="M12 18h.01" />
     </svg>
@@ -106,7 +101,6 @@ const ICONS = {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <title>reply</title>
       <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
     </svg>
   ),
@@ -121,7 +115,6 @@ const ICONS = {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <title>share</title>
       <path d="m17 2 5 5-5 5" />
       <path d="M22 7H7a5 5 0 0 0-5 5v5" />
     </svg>
@@ -137,7 +130,6 @@ const ICONS = {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <title>heart</title>
       <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
     </svg>
   ),
@@ -152,7 +144,6 @@ const ICONS = {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <title>battery</title>
       <rect width="16" height="10" x="2" y="7" rx="2" ry="2" />
       <line x1="22" x2="22" y1="11" y2="13" />
     </svg>
@@ -168,7 +159,6 @@ const ICONS = {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <title>wifi</title>
       <path d="M12 20h.01" />
       <path d="M2 8.82a15 15 0 0 1 20 0" />
       <path d="M5 12.859a10 10 0 0 1 14 0" />
@@ -186,7 +176,6 @@ const ICONS = {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <title>signal</title>
       <path d="M2 20h.01" />
       <path d="M7 20v-4" />
       <path d="M12 20v-8" />
@@ -205,7 +194,6 @@ const ICONS = {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <title>minus</title>
       <path d="M5 12h14" />
     </svg>
   ),
@@ -220,7 +208,6 @@ const ICONS = {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <title>square</title>
       <rect width="18" height="18" x="3" y="3" rx="2" />
     </svg>
   ),
@@ -235,7 +222,6 @@ const ICONS = {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <title>close</title>
       <path d="M18 6 6 18" />
       <path d="m6 6 12 12" />
     </svg>
@@ -244,26 +230,7 @@ const ICONS = {
 
 export async function POST(request: NextRequest) {
   try {
-    const body: {
-      text: string;
-      secondaryText: string;
-      layout: string;
-      platform: "twitter" | "instagram" | "linkedin" | "tiktok";
-      mode: string;
-      fontSize: string;
-      logo: string;
-      frame: string;
-      windowChrome: boolean; // For backward compatibility
-      cardStyle: string;
-      background: string;
-      author: { name: string; handle: string; avatar: string };
-      stats: { likes: number; replies: number; shares: number };
-      date: string;
-      showFooter: boolean;
-      type: string;
-      language: BuiltinLanguage;
-    } = await request.json();
-
+    const body = await request.json();
     let {
       text = "",
       secondaryText = "",
@@ -272,8 +239,8 @@ export async function POST(request: NextRequest) {
       mode = "light",
       fontSize = "large",
       logo,
-      frame = "macos", // Updated default
-      windowChrome, // For backward compatibility
+      frame: frameParam,
+      windowChrome,
       cardStyle = "solid",
       background: backgroundParam,
       author,
@@ -284,10 +251,8 @@ export async function POST(request: NextRequest) {
       language = "javascript",
     } = body;
 
-    // Normalize frame choice
-    let currentFrame = frame;
-    if (windowChrome === false) currentFrame = "none";
-    if (windowChrome === true && !frame) currentFrame = "macos";
+    const currentFrame =
+      frameParam || (windowChrome === false ? "none" : "macos");
 
     const safeAuthor = author || Author;
     const safeStats = stats || { likes: 0, replies: 0, shares: 0 };
@@ -315,20 +280,11 @@ export async function POST(request: NextRequest) {
         avatarSrc.replace(/^\//, ""),
       );
       const avatarBuffer = await fs.promises.readFile(filePath);
-      const ext = path.extname(filePath).toLowerCase();
-      if (ext === ".png") {
-        avatarSrc = `data:image/png;base64,${avatarBuffer.toString("base64")}`;
-      } else {
-        const pngBuffer = await sharp(avatarBuffer).png().toBuffer();
-        avatarSrc = `data:image/png;base64,${pngBuffer.toString("base64")}`;
-      }
+      const pngBuffer = await sharp(avatarBuffer).png().toBuffer();
+      avatarSrc = `data:image/png;base64,${pngBuffer.toString("base64")}`;
     }
 
-    if (
-      logo &&
-      logo.startsWith("data:image/") &&
-      !logo.startsWith("data:image/png")
-    ) {
+    if (logo?.startsWith("data:image/") && !logo.startsWith("data:image/png")) {
       try {
         const base64Data = logo.split(",")[1];
         if (base64Data) {
@@ -337,20 +293,23 @@ export async function POST(request: NextRequest) {
           logo = `data:image/png;base64,${pngBuffer.toString("base64")}`;
         }
       } catch (e) {
-        console.error("Failed to convert logo to PNG:", e);
+        console.error(e);
       }
     }
 
-    if (!text) {
-      return new Response("Missing text", { status: 400 });
-    }
+    const SCALE = 2.4;
+    const s = (val: number) => Math.round(val * SCALE);
 
     let width = 1200;
     let height = 675;
+    const platformKey = (platform as keyof typeof PLATFORM_CONFIG) || "twitter";
     const platformConfig =
-      PLATFORM_CONFIG[platform as keyof typeof PLATFORM_CONFIG] ||
-      PLATFORM_CONFIG.twitter;
-    let background = platformConfig.background;
+      PLATFORM_CONFIG[platformKey] || PLATFORM_CONFIG.twitter;
+    const PlatformIcon =
+      ICONS[platformKey as keyof typeof ICONS] || ICONS.twitter;
+    const iconColor = platformConfig.iconColor;
+
+    const background = backgroundParam || platformConfig.background;
 
     if (platform === "linkedin") {
       width = 1080;
@@ -363,17 +322,12 @@ export async function POST(request: NextRequest) {
       height = 1920;
     }
 
-    if (backgroundParam) {
-      background = backgroundParam;
-    }
-
     const isDark = mode === "dark";
     let cardBg = isDark ? "rgba(17, 24, 39, 0.9)" : "rgba(255, 255, 255, 0.9)";
     const textColor = isDark ? "white" : "#111827";
-    const secondaryTextColor = isDark ? "#d1d5db" : "#6b7280";
+    const secondaryTextColor = isDark ? "#9ca3af" : "#6b7280";
     const borderColor = isDark ? "#374151" : "#e5e7eb";
     let shadow = "0 25px 50px -12px rgba(0, 0, 0, 0.25)";
-    const footerBorder = isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)";
 
     if (cardStyle === "glass") {
       cardBg = isDark ? "rgba(17, 24, 39, 0.6)" : "rgba(255, 255, 255, 0.6)";
@@ -383,9 +337,6 @@ export async function POST(request: NextRequest) {
     }
 
     const textLength = text.length;
-    const SCALE = 2.4;
-    const s = (val: number) => Math.round(val * SCALE);
-
     let fontSizePx = s(30);
     if (fontSize === "huge") {
       if (textLength > 200) fontSizePx = s(20);
@@ -400,16 +351,9 @@ export async function POST(request: NextRequest) {
       else fontSizePx = s(16);
     }
 
-    const PlatformIcon = ICONS[platform] || ICONS.twitter;
-    const iconColor = platformConfig.iconColor;
-
     const fontData = await fs.promises.readFile(
       path.join(process.cwd(), "public", "Inter-Medium.woff"),
     );
-
-    const outerPadding = s(32);
-    const innerPadding = s(24);
-    const minHeight = height;
 
     let contentNode: React.ReactNode = text;
     if (type === "code" || type === "hybrid" || type === "diff") {
@@ -422,9 +366,9 @@ export async function POST(request: NextRequest) {
         contentNode = (
           <div style={{ display: "flex", flexDirection: "column" }}>
             {tokens.map((line, i) => (
-              <div key={`${i * 2}`} style={{ display: "flex", height: s(36) }}>
+              <div key={i} style={{ display: "flex", flexWrap: "wrap" }}>
                 {line.map((token, j) => (
-                  <span key={`${j * 3}`} style={{ color: token.color }}>
+                  <span key={j} style={{ color: token.color }}>
                     {token.content}
                   </span>
                 ))}
@@ -432,41 +376,42 @@ export async function POST(request: NextRequest) {
             ))}
           </div>
         );
-      } catch (e) {
-        console.error("Highlighting failed", e);
+      } catch (_e) {
         contentNode = text;
       }
     }
 
-    const containerStyle: React.CSSProperties = {
-      minHeight: minHeight,
-      width: "100%",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: outerPadding,
-      fontFamily: '"Inter"',
-      ...(background.includes("gradient")
-        ? { backgroundImage: background }
-        : { backgroundColor: background }),
-    };
-
-    const innerCardStyle: React.CSSProperties = {
-      display: "flex",
-      flexDirection: "column",
-      backgroundColor: cardBg,
-      borderRadius: s(12),
-      boxShadow: shadow,
-      width: "100%",
-      minHeight: "100%",
-      maxWidth: "100%",
-      ...(cardStyle !== "flat" ? { border: `1px solid ${borderColor}` } : {}),
-    };
-
     const svg = await satori(
-      <div style={containerStyle}>
-        <div style={innerCardStyle}>
-          {/* Frame: MacOS */}
+      <div
+        style={{
+          minHeight: height,
+          width: "100%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: s(60),
+          fontFamily: '"Inter"',
+          ...(background.includes("gradient")
+            ? { backgroundImage: background }
+            : { backgroundColor: background }),
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            backgroundColor: cardBg,
+            borderRadius: s(24),
+            boxShadow: shadow,
+            width: "100%",
+            maxWidth: "100%",
+            overflow: "hidden",
+            ...(cardStyle !== "flat"
+              ? { border: `1px solid ${borderColor}` }
+              : {}),
+          }}
+        >
+          {/* Frame Headers */}
           {currentFrame === "macos" && (
             <div
               style={{
@@ -475,12 +420,12 @@ export async function POST(request: NextRequest) {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                paddingLeft: s(16),
-                paddingRight: s(16),
+                paddingLeft: s(24),
+                paddingRight: s(24),
                 borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)"}`,
               }}
             >
-              <div style={{ display: "flex", gap: s(8) }}>
+              <div style={{ display: "flex", gap: s(10) }}>
                 <div
                   style={{
                     width: s(12),
@@ -512,7 +457,7 @@ export async function POST(request: NextRequest) {
                     src={logo}
                     width={s(24)}
                     height={s(24)}
-                    style={{ borderRadius: "50%", objectFit: "contain" }}
+                    style={{ borderRadius: "50%" }}
                     alt=""
                   />
                 ) : (
@@ -522,7 +467,6 @@ export async function POST(request: NextRequest) {
             </div>
           )}
 
-          {/* Frame: Windows */}
           {currentFrame === "windows" && (
             <div
               style={{
@@ -531,24 +475,32 @@ export async function POST(request: NextRequest) {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                paddingLeft: s(16),
-                paddingRight: s(16),
+                paddingLeft: s(20),
+                paddingRight: s(20),
                 borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)"}`,
                 backgroundColor: isDark
                   ? "rgba(255,255,255,0.05)"
                   : "rgba(0,0,0,0.05)",
-                borderTopLeftRadius: s(12),
-                borderTopRightRadius: s(12),
               }}
             >
-              <div
-                style={{
-                  fontSize: s(12),
-                  color: secondaryTextColor,
-                  fontWeight: 500,
-                }}
-              >
-                Subbox
+              <div style={{ display: "flex", alignItems: "center", gap: s(8) }}>
+                <div style={{ display: "flex", opacity: 0.6 }}>
+                  {logo ? (
+                    <img src={logo} width={s(16)} height={s(16)} alt="" />
+                  ) : (
+                    PlatformIcon(secondaryTextColor)
+                  )}
+                </div>
+                <div
+                  style={{
+                    fontSize: s(10),
+                    color: secondaryTextColor,
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                  }}
+                >
+                  Project Deck
+                </div>
               </div>
               <div
                 style={{ display: "flex", gap: s(16), alignItems: "center" }}
@@ -560,7 +512,6 @@ export async function POST(request: NextRequest) {
             </div>
           )}
 
-          {/* Frame: Phone */}
           {currentFrame === "phone" && (
             <div
               style={{
@@ -569,14 +520,14 @@ export async function POST(request: NextRequest) {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                paddingLeft: s(24),
-                paddingRight: s(24),
-                paddingTop: s(8),
+                paddingLeft: s(32),
+                paddingRight: s(32),
+                paddingTop: s(12),
                 position: "relative",
               }}
             >
               <div
-                style={{ fontSize: s(12), fontWeight: 600, color: textColor }}
+                style={{ fontSize: s(12), fontWeight: 700, color: textColor }}
               >
                 9:41
               </div>
@@ -587,10 +538,10 @@ export async function POST(request: NextRequest) {
                   top: 0,
                   transform: "translateX(-50%)",
                   height: s(24),
-                  width: s(120),
+                  width: s(110),
                   backgroundColor: "black",
-                  borderBottomLeftRadius: s(12),
-                  borderBottomRightRadius: s(12),
+                  borderBottomLeftRadius: s(16),
+                  borderBottomRightRadius: s(16),
                 }}
               />
               <div style={{ display: "flex", gap: s(6), color: textColor }}>
@@ -605,7 +556,7 @@ export async function POST(request: NextRequest) {
             style={{
               display: "flex",
               flexDirection: "column",
-              padding: innerPadding,
+              padding: s(40),
               flex: 1,
             }}
           >
@@ -614,20 +565,18 @@ export async function POST(request: NextRequest) {
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: s(12),
-                marginBottom: s(24),
+                gap: s(16),
+                marginBottom: s(32),
               }}
             >
               <div
                 style={{
-                  width: s(48),
-                  height: s(48),
+                  width: s(56),
+                  height: s(56),
                   borderRadius: "50%",
-                  backgroundColor: "#ffedd5",
                   display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
                   overflow: "hidden",
+                  border: `2px solid ${isDark ? "#374151" : "white"}`,
                 }}
               >
                 <img
@@ -638,7 +587,12 @@ export async function POST(request: NextRequest) {
               </div>
               <div style={{ display: "flex", flexDirection: "column" }}>
                 <span
-                  style={{ fontWeight: 700, fontSize: s(18), color: textColor }}
+                  style={{
+                    fontWeight: 800,
+                    fontSize: s(20),
+                    color: textColor,
+                    letterSpacing: "-0.02em",
+                  }}
                 >
                   {safeAuthor.name}
                 </span>
@@ -647,7 +601,8 @@ export async function POST(request: NextRequest) {
                     style={{
                       fontSize: s(14),
                       color: secondaryTextColor,
-                      marginTop: s(4),
+                      marginTop: s(2),
+                      fontWeight: 500,
                     }}
                   >
                     {safeAuthor.handle}
@@ -662,7 +617,7 @@ export async function POST(request: NextRequest) {
                 flexDirection: "column",
                 flex: 1,
                 width: "100%",
-                marginBottom: s(24),
+                marginBottom: s(32),
               }}
             >
               {layout === "split" ? (
@@ -671,7 +626,7 @@ export async function POST(request: NextRequest) {
                     display: "flex",
                     flexDirection: "row",
                     width: "100%",
-                    gap: s(16),
+                    gap: s(32),
                     flex: 1,
                   }}
                 >
@@ -681,7 +636,6 @@ export async function POST(request: NextRequest) {
                       fontSize: fontSizePx,
                       color: textColor,
                       lineHeight: 1.6,
-                      whiteSpace: "pre-wrap",
                       fontWeight: 500,
                     }}
                   >
@@ -693,9 +647,8 @@ export async function POST(request: NextRequest) {
                       fontSize: fontSizePx,
                       color: textColor,
                       lineHeight: 1.6,
-                      whiteSpace: "pre-wrap",
                       fontWeight: 500,
-                      opacity: 0.8,
+                      opacity: 0.6,
                     }}
                   >
                     {secondaryText}
@@ -707,7 +660,7 @@ export async function POST(request: NextRequest) {
                     display: "flex",
                     flexDirection: "column",
                     width: "100%",
-                    gap: s(16),
+                    gap: s(32),
                     flex: 1,
                   }}
                 >
@@ -716,7 +669,6 @@ export async function POST(request: NextRequest) {
                       fontSize: fontSizePx,
                       color: textColor,
                       lineHeight: 1.6,
-                      whiteSpace: "pre-wrap",
                       fontWeight: 500,
                     }}
                   >
@@ -727,9 +679,8 @@ export async function POST(request: NextRequest) {
                       fontSize: fontSizePx,
                       color: textColor,
                       lineHeight: 1.6,
-                      whiteSpace: "pre-wrap",
                       fontWeight: 500,
-                      opacity: 0.8,
+                      opacity: 0.6,
                     }}
                   >
                     {secondaryText}
@@ -742,7 +693,6 @@ export async function POST(request: NextRequest) {
                     fontSize: fontSizePx,
                     color: textColor,
                     lineHeight: 1.6,
-                    whiteSpace: "pre-wrap",
                     fontWeight: 500,
                     flex: 1,
                   }}
@@ -756,8 +706,8 @@ export async function POST(request: NextRequest) {
               <div
                 style={{
                   marginTop: "auto",
-                  paddingTop: s(16),
-                  borderTop: `1px solid ${footerBorder}`,
+                  paddingTop: s(24),
+                  borderTop: `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)"}`,
                   display: "flex",
                   flexDirection: "column",
                   width: "100%",
@@ -766,19 +716,24 @@ export async function POST(request: NextRequest) {
                 <div
                   style={{
                     color: secondaryTextColor,
-                    fontSize: s(14),
-                    marginBottom: s(12),
-                    fontWeight: 500,
-                    display: "flex",
+                    fontSize: s(11),
+                    marginBottom: s(16),
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.1em",
                   }}
                 >
                   {safeDate}
                 </div>
                 <div
-                  style={{ display: "flex", gap: s(24), alignItems: "center" }}
+                  style={{ display: "flex", gap: s(32), alignItems: "center" }}
                 >
                   <div
-                    style={{ display: "flex", alignItems: "center", gap: s(8) }}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: s(10),
+                    }}
                   >
                     <div style={{ color: secondaryTextColor, display: "flex" }}>
                       {ICONS.reply(secondaryTextColor)}
@@ -786,7 +741,7 @@ export async function POST(request: NextRequest) {
                     <span
                       style={{
                         color: textColor,
-                        fontWeight: 700,
+                        fontWeight: 800,
                         fontSize: s(14),
                       }}
                     >
@@ -794,7 +749,11 @@ export async function POST(request: NextRequest) {
                     </span>
                   </div>
                   <div
-                    style={{ display: "flex", alignItems: "center", gap: s(8) }}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: s(10),
+                    }}
                   >
                     <div style={{ color: secondaryTextColor, display: "flex" }}>
                       {ICONS.share(secondaryTextColor)}
@@ -802,7 +761,7 @@ export async function POST(request: NextRequest) {
                     <span
                       style={{
                         color: textColor,
-                        fontWeight: 700,
+                        fontWeight: 800,
                         fontSize: s(14),
                       }}
                     >
@@ -810,7 +769,11 @@ export async function POST(request: NextRequest) {
                     </span>
                   </div>
                   <div
-                    style={{ display: "flex", alignItems: "center", gap: s(8) }}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: s(10),
+                    }}
                   >
                     <div style={{ color: secondaryTextColor, display: "flex" }}>
                       {ICONS.heart(secondaryTextColor)}
@@ -818,7 +781,7 @@ export async function POST(request: NextRequest) {
                     <span
                       style={{
                         color: textColor,
-                        fontWeight: 700,
+                        fontWeight: 800,
                         fontSize: s(14),
                       }}
                     >
@@ -840,15 +803,14 @@ export async function POST(request: NextRequest) {
     );
 
     const resvg = new Resvg(svg, { fitTo: { mode: "width", value: width } });
-    const pngData = resvg.render();
-    const pngBuffer = pngData.asPng();
+    const pngBuffer = resvg.render().asPng();
 
     return new Response(pngBuffer as unknown as BodyInit, {
       status: 200,
       headers: { "Content-Type": "image/png" },
     });
   } catch (error) {
-    console.log({ error });
+    console.error(error);
     return NextResponse.json(
       { error: "Failed to generate image" },
       { status: 500 },

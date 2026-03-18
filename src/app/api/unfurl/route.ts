@@ -1,16 +1,16 @@
-import { NextRequest, NextResponse } from "next/server";
 import * as cheerio from "cheerio";
+import { type NextRequest, NextResponse } from "next/server";
 
 // Helper to clean text
 const cleanText = (text: string) => text.replace(/\s+/g, " ").trim();
 
 // Helper to parse numbers (e.g., "1.2k" -> 1200)
-const parseMetric = (str: string): number => {
+const _parseMetric = (str: string): number => {
   if (!str) return 0;
   const lower = str.toLowerCase().replace(/,/g, "");
   if (lower.includes("k")) return parseFloat(lower) * 1000;
   if (lower.includes("m")) return parseFloat(lower) * 1000000;
-  return parseInt(lower.replace(/[^0-9]/g, "")) || 0;
+  return parseInt(lower.replace(/[^0-9]/g, ""), 10) || 0;
 };
 
 export async function POST(request: NextRequest) {
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     const urlObj = new URL(url);
     const domain = urlObj.hostname;
 
-    let result = {
+    const result = {
       text: "",
       author: {
         name: "",
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     // 1. Reddit (JSON API is reliable)
     if (domain.includes("reddit.com")) {
       try {
-        const jsonUrl = url.split("?")[0].replace(/\/$/, "") + ".json";
+        const jsonUrl = `${url.split("?")[0].replace(/\/$/, "")}.json`;
         const res = await fetch(jsonUrl, {
           headers: { "User-Agent": "Subbox/1.0" },
         });
@@ -69,14 +69,14 @@ export async function POST(request: NextRequest) {
 
           result.platform = "twitter"; // Map Reddit to Twitter-like theme for now, or could add 'reddit' if supported
           result.text =
-            post?.title + (post?.selftext ? "\n\n" + post.selftext : "");
+            post?.title + (post?.selftext ? `\n\n${post.selftext}` : "");
           result.author.name = `u/${post?.author}`;
           result.author.handle = `@${post?.subreddit}`;
           result.stats.likes = post?.ups || 0;
           result.stats.replies = post?.num_comments || 0;
           // Reddit doesn't strictly have "shares" in the public API same way
 
-          if (post?.thumbnail && post.thumbnail.startsWith("http")) {
+          if (post?.thumbnail?.startsWith("http")) {
             result.image = post.thumbnail;
           }
 
@@ -136,6 +136,19 @@ export async function POST(request: NextRequest) {
           result.text = result.text.slice(1, -1);
         }
 
+        // Remove redundant author info from start of text
+        // e.g. "Name (@handle) on X: ..."
+        if (result.author.name && result.text.includes(result.author.name)) {
+          const authorPrefix = new RegExp(
+            `^${result.author.name}.*?on (X|Twitter|LinkedIn|Instagram|Facebook):\\s*`,
+            "i",
+          );
+          result.text = result.text.replace(authorPrefix, "");
+        }
+
+        // Additional cleanup for redundant quotes/whitespace
+        result.text = cleanText(result.text).replace(/^["']|["']$/g, "");
+
         // Attempt to find avatar (Twitter often puts it in meta image if it's a text post, OR explicitly in other tags)
         // Sometimes twitter:image is the profile pic for text-only tweets
         const twitterImage = $('meta[name="twitter:image"]').attr("content");
@@ -153,8 +166,7 @@ export async function POST(request: NextRequest) {
         const nameMatch = ogTitle.split(" on LinkedIn:")[0];
         if (nameMatch) {
           result.author.name = nameMatch;
-          result.author.handle =
-            "@" + nameMatch.replace(/\s+/g, "").toLowerCase(); // Fake handle
+          result.author.handle = `@${nameMatch.replace(/\s+/g, "").toLowerCase()}`; // Fake handle
         }
 
         // LinkedIn description often works well for text

@@ -28,7 +28,12 @@ export async function extractColors(imageSrc: string): Promise<string[]> {
         const a = data[i + 3];
 
         // Skip transparent or very dark/light pixels
-        if (a < 128 || (r < 20 && g < 20 && b < 20) || (r > 240 && g > 240 && b > 240)) continue;
+        if (
+          a < 128 ||
+          (r < 20 && g < 20 && b < 20) ||
+          (r > 240 && g > 240 && b > 240)
+        )
+          continue;
 
         const rgb = `${r},${g},${b}`;
         colorMap[rgb] = (colorMap[rgb] || 0) + 1;

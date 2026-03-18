@@ -1,4 +1,4 @@
-import type { Slide, GlobalTheme } from "@/store/deck-store";
+import type { GlobalTheme, Slide } from "@/store/deck-store";
 
 export async function generateImage(
   slide: Slide,

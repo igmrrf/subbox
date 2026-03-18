@@ -1,25 +1,23 @@
 "use client";
 
-import React from "react";
 import {
-  DndContext,
   closestCenter,
+  DndContext,
+  type DragEndEvent,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
-  DragEndEvent,
 } from "@dnd-kit/core";
 import {
-  arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
   useSortable,
+  verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { useDeckStore, Slide } from "@/store/deck-store";
 import { GripVertical } from "lucide-react";
+import { type Slide, useDeckStore } from "@/store/deck-store";
 
 function SortableItem({ slide, index }: { slide: Slide; index: number }) {
   const { attributes, listeners, setNodeRef, transform, transition } =

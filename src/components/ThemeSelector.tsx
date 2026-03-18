@@ -1,25 +1,21 @@
 import clsx from "clsx";
 import {
-  ChevronDown,
-  ChevronUp,
   Instagram,
+  LayoutTemplate,
   Linkedin,
+  Maximize,
+  Minimize,
+  Monitor,
   Palette,
-  RefreshCcw,
   Smartphone,
   Twitter,
   Upload,
   User,
-  Wand2,
   X,
-  LayoutTemplate,
-  Monitor,
-  Maximize,
-  Minimize,
 } from "lucide-react";
 import { useState } from "react";
 import { PRESET_AVATARS } from "@/constants/avatars";
-import { Author, useDeckStore, type SlideFrame } from "@/store/deck-store";
+import { Author, type SlideFrame, useDeckStore } from "@/store/deck-store";
 import { extractColors } from "@/utils/colorExtractor";
 
 const PLATFORMS = [
@@ -30,10 +26,10 @@ const PLATFORMS = [
 ] as const;
 
 const FRAMES: { id: SlideFrame; label: string; icon: any }[] = [
-    { id: "macos", label: "MacOS", icon: LayoutTemplate },
-    { id: "windows", label: "Windows", icon: Monitor },
-    { id: "phone", label: "Phone", icon: Smartphone },
-    { id: "none", label: "None", icon: Maximize },
+  { id: "macos", label: "MacOS", icon: LayoutTemplate },
+  { id: "windows", label: "Windows", icon: Monitor },
+  { id: "phone", label: "Phone", icon: Smartphone },
+  { id: "none", label: "None", icon: Maximize },
 ];
 
 const PRESET_GRADIENTS = [
@@ -61,21 +57,22 @@ export function ThemeSelector() {
       const reader = new FileReader();
       reader.onloadend = async () => {
         const logoSrc = reader.result as string;
-        
-        // Extract colors
+
         try {
-            const colors = await extractColors(logoSrc);
-            setGlobalTheme({ 
-                logo: logoSrc,
-                brandColors: colors,
-                // Automatically set a gradient from the first two colors if available
-                background: colors.length >= 2 
-                    ? `linear-gradient(135deg, ${colors[0]}, ${colors[1]})` 
-                    : colors[0] ? colors[0] : undefined
-            });
+          const colors = await extractColors(logoSrc);
+          setGlobalTheme({
+            logo: logoSrc,
+            brandColors: colors,
+            background:
+              colors.length >= 2
+                ? `linear-gradient(135deg, ${colors[0]}, ${colors[1]})`
+                : colors[0]
+                  ? colors[0]
+                  : undefined,
+          });
         } catch (error) {
-            console.error("Failed to extract colors", error);
-            setGlobalTheme({ logo: logoSrc });
+          console.error("Failed to extract colors", error);
+          setGlobalTheme({ logo: logoSrc });
         }
       };
       reader.readAsDataURL(file);
@@ -103,20 +100,27 @@ export function ThemeSelector() {
     setGlobalTheme({ background: `linear-gradient(135deg, ${start}, ${end})` });
   };
 
-  return (
-    <div className="flex flex-col gap-6 p-4 border-b border-gray-200 dark:border-gray-800">
-      {/* Author Profile Section */}
-      <div>
-        <label
-          htmlFor="author-profile"
-          className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 block flex items-center gap-2"
-        >
-          <User size={14} /> Author Profile
-        </label>
+  const SectionLabel = ({
+    label,
+    icon: Icon,
+  }: {
+    label: string;
+    icon?: any;
+  }) => (
+    <div className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] mb-4 block flex items-center gap-2">
+      {Icon && <Icon size={12} />} {label}
+    </div>
+  );
 
-        <div id="author-profile" className="flex items-start gap-4 mb-3">
+  return (
+    <div className="flex flex-col divide-y divide-gray-100 dark:divide-gray-800">
+      {/* Author Profile Section */}
+      <div className="p-6">
+        <SectionLabel label="Identity" icon={User} />
+
+        <div className="flex items-center gap-4 mb-4">
           <div className="relative group">
-            <div className="w-16 h-16 rounded-full overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-100 relative">
+            <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 relative ring-offset-2 ring-gray-100 dark:ring-gray-800 group-hover:ring-2 transition-all">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={currentAuthor.avatar}
@@ -125,10 +129,10 @@ export function ThemeSelector() {
               />
             </div>
             <label
-              className="absolute bottom-0 right-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-1 rounded-full cursor-pointer shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              className="absolute -bottom-1 -right-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-1.5 rounded-full cursor-pointer shadow-sm hover:scale-110 transition-transform"
               title="Upload Avatar"
             >
-              <Upload size={12} className="text-gray-600 dark:text-gray-300" />
+              <Upload size={10} className="text-gray-600 dark:text-gray-300" />
               <input
                 type="file"
                 accept="image/*"
@@ -138,7 +142,7 @@ export function ThemeSelector() {
             </label>
           </div>
 
-          <div className="flex-1 space-y-2">
+          <div className="flex-1 space-y-1.5">
             <input
               type="text"
               value={currentAuthor.name}
@@ -148,7 +152,7 @@ export function ThemeSelector() {
                 })
               }
               placeholder="Name"
-              className="w-full text-sm p-1.5 rounded-md border border-gray-200 dark:border-gray-700 bg-transparent focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              className="w-full text-xs font-semibold p-2 rounded border border-gray-200 dark:border-gray-700 bg-transparent focus:border-gray-900 dark:focus:border-white outline-none transition-colors"
             />
             <input
               type="text"
@@ -158,8 +162,8 @@ export function ThemeSelector() {
                   author: { ...currentAuthor, handle: e.target.value },
                 })
               }
-              placeholder="Handle"
-              className="w-full text-sm p-1.5 rounded-md border border-gray-200 dark:border-gray-700 bg-transparent focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-gray-500"
+              placeholder="@handle"
+              className="w-full text-[11px] p-2 rounded border border-gray-200 dark:border-gray-700 bg-transparent focus:border-gray-900 dark:focus:border-white outline-none text-gray-500 font-mono transition-colors"
             />
           </div>
         </div>
@@ -167,32 +171,27 @@ export function ThemeSelector() {
         <button
           type="button"
           onClick={() => setShowAvatarPresets(!showAvatarPresets)}
-          className="text-xs text-blue-500 hover:text-blue-600 flex items-center gap-1 font-medium"
+          className="text-[10px] text-blue-500 hover:underline flex items-center gap-1 font-bold uppercase tracking-wider"
         >
-          {showAvatarPresets ? (
-            <ChevronUp size={12} />
-          ) : (
-            <ChevronDown size={12} />
-          )}
-          {showAvatarPresets ? "Hide Presets" : "Choose from Presets"}
+          {showAvatarPresets ? <Minimize size={10} /> : <Maximize size={10} />}
+          {showAvatarPresets ? "Close Presets" : "Library"}
         </button>
 
         {showAvatarPresets && (
-          <div className="grid grid-cols-6 gap-2 mt-3 p-2 bg-gray-50 dark:bg-gray-900 rounded-lg max-h-48 overflow-y-auto">
-            {PRESET_AVATARS.map((src, i) => (
+          <div className="grid grid-cols-5 gap-2 mt-4 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-xl max-h-40 overflow-y-auto">
+            {PRESET_AVATARS.map((src) => (
               <button
                 type="button"
-                key={`${i * 2}`}
+                key={src}
                 onClick={() =>
                   setGlobalTheme({ author: { ...currentAuthor, avatar: src } })
                 }
                 className={clsx(
-                  "w-full aspect-square rounded-full overflow-hidden border hover:scale-110 transition-transform",
+                  "w-full aspect-square rounded-full overflow-hidden border-2 transition-all hover:scale-110",
                   currentAuthor.avatar === src
-                    ? "ring-2 ring-blue-500 ring-offset-1"
-                    : "border-gray-200 dark:border-gray-700",
+                    ? "border-blue-500 scale-110"
+                    : "border-transparent",
                 )}
-                title={`Preset ${i + 1}`}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={src} alt="" className="w-full h-full object-cover" />
@@ -202,309 +201,261 @@ export function ThemeSelector() {
         )}
       </div>
 
-      <div className="w-full h-px bg-gray-200 dark:bg-gray-800" />
-
-      <div>
-        <label
-          htmlFor="platform-selction"
-          className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block"
-        >
-          Platform
-        </label>
-        <div id="platform-selction" className="flex gap-2">
-          {PLATFORMS.map((p) => (
-            <button
-              type="button"
-              key={p.id}
-              onClick={() => {
-                setGlobalTheme({ platform: p.id });
-              }}
-              className={clsx(
-                "p-2 rounded-md transition-colors",
-                globalTheme.platform === p.id
-                  ? "bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400"
-                  : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300",
-              )}
-              title={p.label}
-            >
-              <p.icon size={20} />
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <label
-          htmlFor="frame-selection"
-          className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block"
-        >
-          Frame Style
-        </label>
-        <div id="frame-selection" className="flex gap-2 text-sm bg-gray-100 dark:bg-gray-800 p-1 rounded-lg mb-4">
-            {FRAMES.map((f) => (
-                <button
-                    type="button"
-                    key={f.id}
-                    onClick={() => setGlobalTheme({ frameStyle: f.id })}
-                    className={clsx(
-                        "flex-1 py-1 px-2 rounded-md capitalize transition-all cursor-pointer text-xs flex items-center justify-center gap-1",
-                        globalTheme.frameStyle === f.id
-                            ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100 font-medium"
-                            : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-                    )}
-                    title={f.label}
-                >
-                    <f.icon size={14} />
-                    <span className="hidden sm:inline">{f.label}</span>
-                </button>
+      {/* Global Config Section */}
+      <div className="p-6 space-y-8">
+        <div>
+          <SectionLabel label="Platform" />
+          <div className="grid grid-cols-4 gap-2">
+            {PLATFORMS.map((p) => (
+              <button
+                type="button"
+                key={p.id}
+                onClick={() => setGlobalTheme({ platform: p.id })}
+                className={clsx(
+                  "flex flex-col items-center justify-center p-3 rounded-xl border transition-all gap-2 group",
+                  globalTheme.platform === p.id
+                    ? "bg-gray-900 border-gray-900 text-white dark:bg-white dark:border-white dark:text-gray-900 shadow-md"
+                    : "border-gray-100 dark:border-gray-800 text-gray-400 hover:border-gray-300 dark:hover:border-gray-600",
+                )}
+                title={p.label}
+              >
+                <p.icon size={18} />
+              </button>
             ))}
-        </div>
-      </div>
-
-      <div>
-        <label
-          htmlFor="appearance-selection"
-          className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block"
-        >
-          Appearance
-        </label>
-        <div
-          id="appearance-selection"
-          className="flex gap-2 text-sm bg-gray-100 dark:bg-gray-800 p-1 rounded-lg mb-4"
-        >
-          {["light", "dark"].map((mode) => (
-            <button
-              type="button"
-              key={mode}
-              onClick={() => setGlobalTheme({ mode: mode as any })}
-              className={clsx(
-                "flex-1 py-1 rounded-md capitalize transition-all cursor-pointer",
-                globalTheme.mode === mode
-                  ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100 font-medium"
-                  : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300",
-              )}
-            >
-              {mode}
-            </button>
-          ))}
+          </div>
         </div>
 
-        {/* Toggles */}
-        <div className="space-y-3 mb-4">
+        <div>
+          <SectionLabel label="Frame" />
+          <div className="flex bg-gray-100 dark:bg-gray-900 p-1 rounded-xl">
+            {FRAMES.map((f) => (
+              <button
+                type="button"
+                key={f.id}
+                onClick={() => setGlobalTheme({ frameStyle: f.id })}
+                className={clsx(
+                  "flex-1 py-2 rounded-lg transition-all flex flex-col items-center gap-1",
+                  globalTheme.frameStyle === f.id
+                    ? "bg-white dark:bg-gray-800 shadow-sm text-gray-900 dark:text-gray-100 font-bold"
+                    : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-400",
+                )}
+              >
+                <f.icon size={14} />
+                <span className="text-[10px] uppercase tracking-tighter">
+                  {f.label}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <SectionLabel label="Environment" />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-3">
+              <div className="text-[10px] text-gray-400 font-bold uppercase">
+                Mode
+              </div>
+              <div className="flex bg-gray-100 dark:bg-gray-900 p-1 rounded-lg">
+                {["light", "dark"].map((mode) => (
+                  <button
+                    type="button"
+                    key={mode}
+                    onClick={() => setGlobalTheme({ mode: mode as any })}
+                    className={clsx(
+                      "flex-1 py-1.5 rounded-md capitalize transition-all text-[11px] font-medium",
+                      globalTheme.mode === mode
+                        ? "bg-white dark:bg-gray-800 shadow-sm"
+                        : "text-gray-400 hover:text-gray-600",
+                    )}
+                  >
+                    {mode}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="text-[10px] text-gray-400 font-bold uppercase">
+                Card
+              </div>
+              <div className="flex bg-gray-100 dark:bg-gray-900 p-1 rounded-lg">
+                {["solid", "glass", "flat"].map((style) => (
+                  <button
+                    type="button"
+                    key={style}
+                    onClick={() => setGlobalTheme({ cardStyle: style as any })}
+                    className={clsx(
+                      "flex-1 py-1.5 rounded-md capitalize transition-all text-[11px] font-medium",
+                      globalTheme.cardStyle === style
+                        ? "bg-white dark:bg-gray-800 shadow-sm"
+                        : "text-gray-400 hover:text-gray-600",
+                    )}
+                  >
+                    {style}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-4 pt-4 border-t border-gray-50 dark:border-gray-800/50">
           <div className="flex items-center justify-between">
-            <label
-              htmlFor="show-footer"
-              className="text-xs font-semibold text-gray-500 uppercase tracking-wider block"
-            >
-              Show Footer
-            </label>
+            <div className="flex flex-col gap-0.5">
+              <div className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                Show Footer
+              </div>
+              <span className="text-[10px] text-gray-400">
+                Timestamp and stats visibility
+              </span>
+            </div>
             <button
-              id="show-footer"
               type="button"
               onClick={() =>
                 setGlobalTheme({ showFooter: !globalTheme.showFooter })
               }
               className={clsx(
-                "w-10 h-6 rounded-full transition-colors relative cursor-pointer",
-                (globalTheme.showFooter ?? true)
-                  ? "bg-blue-500"
-                  : "bg-gray-300 dark:bg-gray-700",
+                "w-10 h-5 rounded-full transition-all relative",
+                globalTheme.showFooter
+                  ? "bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.3)]"
+                  : "bg-gray-200 dark:bg-gray-800",
               )}
             >
               <div
                 className={clsx(
-                  "absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform",
-                  (globalTheme.showFooter ?? true) && "translate-x-4",
+                  "absolute top-1 left-1 w-3 h-3 rounded-full bg-white transition-transform",
+                  globalTheme.showFooter && "translate-x-5",
                 )}
               />
             </button>
           </div>
 
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Wand2 size={14} className="text-purple-500" />
-              <label
-                htmlFor="set-auto-split"
-                className="text-xs font-semibold text-gray-500 uppercase tracking-wider block"
-              >
+            <div className="flex flex-col gap-0.5">
+              <div className="text-xs font-bold text-gray-700 dark:text-gray-300">
                 Auto Split
-              </label>
+              </div>
+              <span className="text-[10px] text-gray-400">
+                Handle long text automatically
+              </span>
             </div>
             <button
-              id="set-auto-split"
               type="button"
+              aria-label="Toggle Auto Split"
               onClick={() =>
                 setGlobalTheme({ autoSplit: !globalTheme.autoSplit })
               }
-              aria-label="Toggle Auto Split"
               className={clsx(
-                "w-10 h-6 rounded-full transition-colors relative cursor-pointer",
+                "w-10 h-5 rounded-full transition-all relative",
                 globalTheme.autoSplit
-                  ? "bg-purple-500"
-                  : "bg-gray-300 dark:bg-gray-700",
+                  ? "bg-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.3)]"
+                  : "bg-gray-200 dark:bg-gray-800",
               )}
             >
               <div
                 className={clsx(
-                  "absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform",
-                  globalTheme.autoSplit && "translate-x-4",
+                  "absolute top-1 left-1 w-3 h-3 rounded-full bg-white transition-transform",
+                  globalTheme.autoSplit && "translate-x-5",
                 )}
               />
             </button>
           </div>
         </div>
 
-        <label
-          htmlFor="style-selection"
-          className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block"
-        >
-          Card Style
-        </label>
-        <div
-          id="style-selection"
-          className="flex gap-2 text-sm bg-gray-100 dark:bg-gray-800 p-1 rounded-lg mb-4"
-        >
-          {["solid", "glass", "flat"].map((style) => (
-            <button
-              type="button"
-              key={style}
-              onClick={() => setGlobalTheme({ cardStyle: style as any })}
-              className={clsx(
-                "flex-1 py-1 rounded-md capitalize transition-all cursor-pointer text-xs",
-                globalTheme.cardStyle === style
-                  ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-100 font-medium"
-                  : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300",
-              )}
-            >
-              {style}
-            </button>
-          ))}
-        </div>
-
-        {/* Background Palette */}
-        <div className="mb-4">
-          <div className="flex items-center justify-between mb-2">
-            <label
-              htmlFor="background-selection"
-              className="text-xs font-semibold text-gray-500 uppercase tracking-wider block"
-            >
-              Background
-            </label>
-            {globalTheme.background && (
+        <div>
+          <SectionLabel label="Background" />
+          <div className="grid grid-cols-6 gap-2 mb-4">
+            {globalTheme.brandColors?.map((color, i) => (
               <button
                 type="button"
-                onClick={() => setGlobalTheme({ background: undefined })}
-                className="text-xs text-blue-500 hover:text-blue-600 flex items-center gap-1"
-              >
-                <RefreshCcw size={10} /> Reset
-              </button>
-            )}
-          </div>
-
-          {/* Presets */}
-          <div
-            id="background-selection"
-            className="grid grid-cols-6 gap-2 mb-3"
-          >
-            {/* Show Brand Colors first if available */}
-            {globalTheme.brandColors?.map((color, i) => (
-                <button
-                    type="button"
-                    key={`brand-${i}`}
-                    onClick={() => setGlobalTheme({ background: color })}
-                    className={clsx(
-                        "w-full aspect-square rounded-full border hover:scale-110 transition-transform",
-                        globalTheme.background === color
-                            ? "ring-2 ring-blue-500 ring-offset-2"
-                            : "border-gray-200",
-                    )}
-                    style={{ background: color }}
-                    aria-label={`Brand Color ${i + 1}`}
-                    title="Brand Color"
-                />
+                key={`brand-${i}`}
+                onClick={() => setGlobalTheme({ background: color })}
+                className={clsx(
+                  "w-full aspect-square rounded-lg border-2 transition-transform hover:scale-110",
+                  globalTheme.background === color
+                    ? "border-blue-500 scale-110"
+                    : "border-transparent",
+                )}
+                style={{ background: color }}
+                title="Brand Color"
+              />
             ))}
-
             {PRESET_GRADIENTS.map((bg, i) => (
               <button
                 type="button"
-                key={`${i * 2}`}
+                key={i}
                 onClick={() => setGlobalTheme({ background: bg })}
                 className={clsx(
-                  "w-full aspect-square rounded-full border hover:scale-110 transition-transform",
+                  "w-full aspect-square rounded-lg border-2 transition-transform hover:scale-110",
                   globalTheme.background === bg
-                    ? "ring-2 ring-blue-500 ring-offset-2"
-                    : "border-gray-200",
+                    ? "border-blue-500 scale-110"
+                    : "border-transparent",
                 )}
                 style={{ background: bg }}
-                aria-label={`Preset ${i + 1}`}
               />
             ))}
           </div>
 
-          {/* Custom Builder */}
-          <div className="flex items-center gap-2 text-sm bg-gray-50 dark:bg-gray-900 p-2 rounded-lg">
+          <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800">
             <Palette size={14} className="text-gray-400" />
-            <span className="text-xs text-gray-500">Custom</span>
-            <input
-              type="color"
-              value={customColors.start}
-              onChange={(e) =>
-                applyCustomGradient(e.target.value, customColors.end)
-              }
-              className="w-6 h-6 rounded cursor-pointer border-none bg-transparent"
-              title="Start Color"
-            />
-            <input
-              type="color"
-              value={customColors.end}
-              onChange={(e) =>
-                applyCustomGradient(customColors.start, e.target.value)
-              }
-              className="w-6 h-6 rounded cursor-pointer border-none bg-transparent"
-              title="End Color"
-            />
+            <div className="flex-1 flex gap-2">
+              <input
+                type="color"
+                value={customColors.start}
+                onChange={(e) =>
+                  applyCustomGradient(e.target.value, customColors.end)
+                }
+                className="w-full h-6 rounded cursor-pointer border-none bg-transparent"
+              />
+              <input
+                type="color"
+                value={customColors.end}
+                onChange={(e) =>
+                  applyCustomGradient(customColors.start, e.target.value)
+                }
+                className="w-full h-6 rounded cursor-pointer border-none bg-transparent"
+              />
+            </div>
           </div>
         </div>
 
-        <label
-          htmlFor="brand-logo"
-          className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block"
-        >
-          Brand Logo
-        </label>
-        {globalTheme.logo ? (
-          <div
-            id="brand-logo"
-            className="relative w-16 h-16 border rounded-md overflow-hidden bg-gray-50 flex items-center justify-center"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={globalTheme.logo}
-              alt="Brand Logo"
-              className="max-w-full max-h-full object-contain"
-            />
-            <button
-              type="button"
-              onClick={() => setGlobalTheme({ logo: undefined, brandColors: [] })}
-              className="absolute top-0 right-0 bg-red-500 text-white p-0.5 rounded-bl-md hover:bg-red-600 cursor-pointer"
-            >
-              <X size={12} />
-            </button>
-          </div>
-        ) : (
-          <label
-            id="brand-logo"
-            className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 cursor-pointer border border-dashed border-gray-300 rounded-md p-2 justify-center hover:bg-gray-50"
-          >
-            <Upload size={16} /> Upload Logo
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleLogoUpload}
-            />
-          </label>
-        )}
+        <div>
+          <SectionLabel label="Brand Asset" />
+          {globalTheme.logo ? (
+            <div className="relative group w-20 h-20 p-2 bg-gray-50 dark:bg-gray-900 rounded-xl border border-dashed border-gray-200 dark:border-gray-700 flex items-center justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={globalTheme.logo}
+                alt="Logo"
+                className="max-w-full max-h-full object-contain"
+              />
+              <button
+                type="button"
+                onClick={() =>
+                  setGlobalTheme({ logo: undefined, brandColors: [] })
+                }
+                className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full shadow-lg hover:scale-110 transition-transform"
+              >
+                <X size={12} />
+              </button>
+            </div>
+          ) : (
+            <label className="flex flex-col items-center gap-2 text-xs text-gray-400 hover:text-gray-600 cursor-pointer border-2 border-dashed border-gray-100 dark:border-gray-800 rounded-xl p-6 hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors">
+              <Upload size={20} />
+              <span className="font-bold uppercase tracking-tighter">
+                Upload Logo
+              </span>
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleLogoUpload}
+                data-testid="logo-upload"
+              />
+            </label>
+          )}
+        </div>
       </div>
     </div>
   );

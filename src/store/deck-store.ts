@@ -1,8 +1,8 @@
-import { create } from "zustand";
 import { v4 as uuidv4 } from "uuid";
+import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { splitTextContent, PLATFORM_LIMITS } from "@/utils/textUtils";
 import { clearAllBrowserData } from "@/utils/storage";
+import { PLATFORM_LIMITS, splitTextContent } from "@/utils/textUtils";
 
 export const Author = {
   name: "Subbox",
@@ -48,7 +48,7 @@ export interface Slide {
   content: SlideContent;
   settings: SlideSettings;
   annotations: Annotation[];
-  
+
   // "Social" specific fields (kept at root for now for easier migration/access)
   author: {
     name: string;
@@ -100,18 +100,18 @@ const generateRandomStats = () => ({
   shares: Math.floor(Math.random() * 10000),
 });
 
-const createNewSlide = (content: string = ""): Slide => ({
+const createNewSlide = (content: string = "", theme: GlobalTheme): Slide => ({
   id: uuidv4(),
-  type: "social", // Default to social
+  type: "social",
   layout: "single",
   content: { primary: content },
   settings: {
-    frame: "macos",
-    theme: "twitter",
+    frame: theme.frameStyle || "macos",
+    theme: theme.platform || "twitter",
     padding: 32,
   },
   annotations: [],
-  author: Author,
+  author: theme.author || Author,
   stats: generateRandomStats(),
   date: new Date().toLocaleDateString("en-GB", {
     hour: "numeric",
@@ -125,7 +125,7 @@ const createNewSlide = (content: string = ""): Slide => ({
 
 const INITIAL_SLIDES: Slide[] = [
   {
-    ...createNewSlide("Welcome to Subbox!"),
+    ...createNewSlide("Welcome to Subbox!", INITIAL_THEME),
     id: "default-slide",
     stats: {
       likes: 4200,
@@ -147,10 +147,15 @@ interface DeckState {
   slides: Slide[];
   globalTheme: GlobalTheme;
   sourceText: string;
-  
+
   // Actions
   addSlide: () => void;
-  updateSlide: (id: string, updates: Partial<Slide> | Partial<SlideSettings> | Partial<SlideContent>) => void;
+  updateSlide: (id: string, updates: Partial<Slide>) => void;
+  updateAnnotation: (
+    slideId: string,
+    annotationId: string,
+    updates: Partial<Annotation>,
+  ) => void;
   removeSlide: (id: string) => void;
   setSlides: (slides: Slide[]) => void;
   duplicateSlide: (id: string) => void;
@@ -163,7 +168,7 @@ interface DeckState {
 
 export const useDeckStore = create<DeckState>()(
   persist(
-    (set, get) => ({
+    (set, _get) => ({
       slides: INITIAL_SLIDES,
       globalTheme: INITIAL_THEME,
       sourceText: "",
@@ -179,14 +184,14 @@ export const useDeckStore = create<DeckState>()(
 
       addSlide: () =>
         set((state) => ({
-          slides: [...state.slides, createNewSlide()],
+          slides: [...state.slides, createNewSlide("", state.globalTheme)],
         })),
 
       addSlides: (contents) =>
         set((state) => ({
           slides: [
             ...state.slides,
-            ...contents.map((c) => createNewSlide(c)),
+            ...contents.map((c) => createNewSlide(c, state.globalTheme)),
           ],
         })),
 
@@ -194,19 +199,21 @@ export const useDeckStore = create<DeckState>()(
         set((state) => ({
           slides: state.slides.map((slide) => {
             if (slide.id !== id) return slide;
-            
-            // Handle nested updates for content/settings if passed flat (convenience)
-            // or if passed as nested objects
-            // Actually, let's keep it simple: caller must match structure OR we merge deeply.
-            // For now, simple shallow merge of root props. 
-            // If caller wants to update content, they pass { content: { ...slide.content, primary: 'new' } }
-            // But we can be smarter.
-            
-            const newSlide = { ...slide, ...updates };
-            
-            // Deep merge content if it's a partial update? 
-            // This type signature is a bit loose, let's trust typescript.
-            return newSlide as Slide;
+            return { ...slide, ...updates };
+          }),
+        })),
+
+      updateAnnotation: (slideId, annotationId, updates) =>
+        set((state) => ({
+          slides: state.slides.map((slide) => {
+            if (slide.id !== slideId) return slide;
+            return {
+              ...slide,
+              annotations: slide.annotations.map((ann) => {
+                if (ann.id !== annotationId) return ann;
+                return { ...ann, ...updates };
+              }),
+            };
           }),
         })),
 
@@ -221,14 +228,14 @@ export const useDeckStore = create<DeckState>()(
         set((state) => {
           const index = state.slides.findIndex((s) => s.id === id);
           if (index === -1) return state;
-          
+
           const slideToClone = state.slides[index];
-          const newSlide = { 
-            ...slideToClone, 
+          const newSlide = {
+            ...slideToClone,
             id: uuidv4(),
-            stats: { ...slideToClone.stats } // Clone stats
+            stats: { ...slideToClone.stats }, // Clone stats
           };
-          
+
           const newSlides = [...state.slides];
           newSlides.splice(index + 1, 0, newSlide);
           return { slides: newSlides };
@@ -267,7 +274,9 @@ export const useDeckStore = create<DeckState>()(
             const limit = PLATFORM_LIMITS[newTheme.platform] || 280;
             const newContents = splitTextContent(state.sourceText, limit);
 
-            newSlides = newContents.map((content) => createNewSlide(content));
+            newSlides = newContents.map((content) =>
+              createNewSlide(content, newTheme),
+            );
           }
 
           return {
@@ -279,7 +288,7 @@ export const useDeckStore = create<DeckState>()(
     }),
     {
       name: "subbox-storage-v2", // Bump version to force reset or handle migration if needed
-      // partialize: (state) => ({ ...state }), 
+      // partialize: (state) => ({ ...state }),
       // For now, version bump in key is enough to avoid reading old invalid state
     },
   ),

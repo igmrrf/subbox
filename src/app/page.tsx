@@ -3,7 +3,7 @@
 import clsx from "clsx";
 import { saveAs } from "file-saver";
 import JSZip from "jszip";
-import { DownloadCloud, Menu, Plus, Trash2, X } from "lucide-react";
+import { DownloadCloud, Menu, Plus, Trash2, X, Palette } from "lucide-react";
 import { useLayoutEffect, useState } from "react";
 import { Editor } from "@/components/Editor";
 import { SortableSlideList } from "@/components/SortableSlideList";
@@ -15,7 +15,8 @@ import { clearAllBrowserData } from "@/utils/storage";
 export default function Home() {
   const { slides, addSlide, globalTheme, reset } = useDeckStore();
   const [isExporting, setIsExporting] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(false);
+  const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(false);
 
   const handleExportAll = async () => {
     if (slides.length === 0) return;
@@ -61,94 +62,139 @@ export default function Home() {
   };
 
   return (
-    <div className="flex h-screen flex-col md:flex-row bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 overflow-hidden">
+    <div className="flex h-screen flex-col md:flex-row bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 overflow-hidden font-sans">
       {/* Mobile Header */}
-      <header className="md:hidden flex items-center justify-between p-4 bg-white dark:bg-black border-b border-gray-200 dark:border-gray-800 z-20 shrink-0">
-        <h1 className="text-xl font-bold">Subbox</h1>
+      <header className="md:hidden flex items-center justify-between p-4 bg-white dark:bg-black border-b border-gray-200 dark:border-gray-800 z-30 shrink-0">
         <button
           type="button"
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          onClick={() => {
+            setIsLeftSidebarOpen(!isLeftSidebarOpen);
+            setIsRightSidebarOpen(false);
+          }}
           className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md"
         >
-          {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          <Menu size={20} />
+        </button>
+        <h1 className="text-xl font-bold tracking-tight">Subbox</h1>
+        <button
+          type="button"
+          onClick={() => {
+            setIsRightSidebarOpen(!isRightSidebarOpen);
+            setIsLeftSidebarOpen(false);
+          }}
+          className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md"
+        >
+          <Palette size={20} />
         </button>
       </header>
 
-      {/* Sidebar Controls */}
+      {/* Left Sidebar - Slide Management */}
       <aside
         className={clsx(
-          "fixed inset-0 z-10 md:static md:z-0 w-full md:w-80 border-r border-gray-200 dark:border-gray-800 flex flex-col bg-white dark:bg-black transition-transform duration-300 ease-in-out transform",
-          isMobileMenuOpen
-            ? "translate-x-0"
-            : "-translate-x-full md:translate-x-0",
-          // On mobile, top padding for header? No, fixed inset-0 covers it if z-index high.
-          // But header is z-20. So sidebar slides UNDER header?
-          // If Sidebar is z-10 and top-0, it covers screen. Header z-20 is on top.
-          // We need padding-top on mobile sidebar to avoid hiding behind header?
-          // Or just make sidebar `top-[57px]` (header height).
-          // Let's use top-14 (approx 56px) for mobile.
-          "top-[60px] md:top-0 h-[calc(100%-60px)] md:h-full",
+          "fixed inset-y-0 left-0 z-40 w-72 border-r border-gray-200 dark:border-gray-800 flex flex-col bg-white dark:bg-black transition-transform duration-300 ease-in-out transform md:static md:translate-x-0",
+          isLeftSidebarOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
-        <div className="hidden md:block p-4 shrink-0">
-          <h1 className="text-xl font-bold">Subbox</h1>
+        <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between shrink-0">
+          <h1 className="text-xl font-bold tracking-tight">Subbox</h1>
+          <button
+            type="button"
+            className="md:hidden"
+            onClick={() => setIsLeftSidebarOpen(false)}
+          >
+            <X size={20} />
+          </button>
         </div>
 
-        {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto">
-          <ThemeSelector />
-
-          <div className="p-4 flex flex-col gap-4">
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  addSlide();
-                  if (window.innerWidth < 768) setIsMobileMenuOpen(false);
-                }}
-                className="flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors cursor-pointer"
-              >
-                <Plus size={16} /> Add Slide
-              </button>
-
-              <button
-                type="button"
-                onClick={handleExportAll}
-                disabled={isExporting || slides.length === 0}
-                className="flex items-center justify-center gap-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-pointer disabled:opacity-50"
-              >
-                <DownloadCloud size={16} /> {isExporting ? "..." : "Export"}
-              </button>
-            </div>
+        <div className="flex-1 overflow-y-auto p-4 space-y-6">
+          <div className="space-y-2">
+            <button
+              type="button"
+              onClick={() => {
+                addSlide();
+                if (window.innerWidth < 768) setIsLeftSidebarOpen(false);
+              }}
+              className="w-full flex items-center justify-center gap-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-4 py-2.5 rounded-lg font-medium hover:opacity-90 transition-opacity cursor-pointer text-sm shadow-sm"
+            >
+              <Plus size={16} /> Add Slide
+            </button>
 
             <button
               type="button"
-              onClick={handleReset}
-              className="flex items-center justify-center gap-2 w-full text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 px-4 py-2 rounded-md transition-colors cursor-pointer text-sm"
+              onClick={handleExportAll}
+              disabled={isExporting || slides.length === 0}
+              className="w-full flex items-center justify-center gap-2 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-4 py-2.5 rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-pointer disabled:opacity-50 text-sm border border-gray-200 dark:border-gray-700"
             >
-              <Trash2 size={14} /> Reset Deck
+              <DownloadCloud size={16} />{" "}
+              {isExporting ? "Exporting..." : "Export Deck"}
             </button>
+          </div>
 
-            <div className="pt-2 border-t border-gray-100 dark:border-gray-800">
-              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                Slides
+          <div className="pt-4 border-t border-gray-100 dark:border-gray-800">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                Deck Outline
               </h3>
-              <SortableSlideList />
+              <span className="text-[10px] bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-gray-500 font-mono">
+                {slides.length}
+              </span>
             </div>
+            <SortableSlideList />
+          </div>
+
+          <div className="pt-4 border-t border-gray-100 dark:border-gray-800 mt-auto">
+            <button
+              type="button"
+              onClick={handleReset}
+              className="flex items-center justify-center gap-2 w-full text-gray-400 hover:text-red-500 px-4 py-2 rounded-lg transition-colors cursor-pointer text-xs font-medium"
+            >
+              <Trash2 size={14} /> Clear All Data
+            </button>
           </div>
         </div>
       </aside>
 
       {/* Main Area */}
-      <main className="flex-1 p-4 md:p-8 overflow-y-auto relative w-full h-full">
-        <Editor />
+      <main className="flex-1 overflow-y-auto relative bg-[#fcfcfc] dark:bg-gray-950 p-4 md:p-12">
+        <div className="max-w-4xl mx-auto">
+          <Editor />
+        </div>
       </main>
 
-      {/* Overlay for mobile when menu is open */}
-      {isMobileMenuOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-0 md:hidden"
-          onClick={() => setIsMobileMenuOpen(false)}
+      {/* Right Sidebar - Global Config */}
+      <aside
+        className={clsx(
+          "fixed inset-y-0 right-0 z-40 w-80 border-l border-gray-200 dark:border-gray-800 flex flex-col bg-white dark:bg-black transition-transform duration-300 ease-in-out transform md:static md:translate-x-0",
+          isRightSidebarOpen ? "translate-x-0" : "translate-x-full",
+        )}
+      >
+        <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between shrink-0">
+          <h3 className="text-sm font-bold tracking-tight uppercase">
+            Customization
+          </h3>
+          <button
+            type="button"
+            className="md:hidden"
+            onClick={() => setIsRightSidebarOpen(false)}
+          >
+            <X size={20} />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto min-h-0">
+          <ThemeSelector />
+        </div>
+      </aside>
+
+      {/* Overlay for mobile sidebars */}
+      {(isLeftSidebarOpen || isRightSidebarOpen) && (
+        <button
+          type="button"
+          aria-label="Close sidebars"
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-30 md:hidden transition-opacity border-none outline-none"
+          onClick={() => {
+            setIsLeftSidebarOpen(false);
+            setIsRightSidebarOpen(false);
+          }}
         />
       )}
     </div>

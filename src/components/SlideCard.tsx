@@ -1,34 +1,38 @@
 "use client";
 
+import clsx from "clsx";
 import { saveAs } from "file-saver";
 import { motion } from "framer-motion";
 import {
   ClipboardCopy,
+  Code,
+  Columns,
   Copy,
   Download,
+  FileText,
   Heart,
+  Layers,
   Link2,
   MessageCircle,
-  RefreshCw,
   Repeat2,
-  Trash2,
-  Layout,
-  Code,
-  FileText,
   Smartphone,
-  Columns,
+  Sparkles,
   Square,
-  Layers
+  Trash2,
 } from "lucide-react";
-import { type ClipboardEvent, useState } from "react";
+import { useState } from "react";
 import { v4 as uuidv4 } from "uuid";
-import { type Slide, type SlideType, type SlideLayout, useDeckStore, type Annotation } from "@/store/deck-store";
+import {
+  type Annotation,
+  type Slide,
+  type SlideLayout,
+  type SlideType,
+  useDeckStore,
+} from "@/store/deck-store";
 import { generateImage } from "@/utils/generateImage";
 import { PLATFORM_LIMITS, splitTextContent } from "@/utils/textUtils";
-import { detectInputType } from "@/utils/inputDetector";
 import { SlidePreview } from "./SlidePreview";
 import { SmartPasteModal } from "./SmartPasteModal";
-import clsx from "clsx";
 
 interface SlideCardProps {
   slide: Slide;
@@ -38,6 +42,7 @@ interface SlideCardProps {
 export function SlideCard({ slide, index }: SlideCardProps) {
   const {
     updateSlide,
+    updateAnnotation,
     removeSlide,
     duplicateSlide,
     globalTheme,
@@ -102,7 +107,10 @@ export function SlideCard({ slide, index }: SlideCardProps) {
       if (data.error) throw new Error(data.error);
 
       const updates: Partial<Slide> = {
-        content: { ...slide.content, primary: data.text || slide.content.primary },
+        content: {
+          ...slide.content,
+          primary: data.text || slide.content.primary,
+        },
       };
 
       if (data.author && (data.author.name || data.author.handle)) {
@@ -121,6 +129,10 @@ export function SlideCard({ slide, index }: SlideCardProps) {
         };
       }
 
+      if (data.platform) {
+        updates.settings = { ...slide.settings, theme: data.platform };
+      }
+
       updateSlide(slide.id, updates);
     } catch (e) {
       console.error(e);
@@ -131,19 +143,33 @@ export function SlideCard({ slide, index }: SlideCardProps) {
   };
 
   const handleUpdateContent = (primary: string, secondary?: string) => {
-      updateSlide(slide.id, { content: { primary, secondary } });
+    updateSlide(slide.id, { content: { primary, secondary } });
   };
 
   const handleAddAnnotation = (annotation: Annotation) => {
-      updateSlide(slide.id, {
-          annotations: [...(slide.annotations || []), annotation]
-      });
+    updateSlide(slide.id, {
+      annotations: [...(slide.annotations || []), annotation],
+    });
   };
 
   const handleRemoveAnnotation = (annotationId: string) => {
+    updateSlide(slide.id, {
+      annotations: (slide.annotations || []).filter(
+        (a) => a.id !== annotationId,
+      ),
+    });
+  };
+
+  const handlePaste = (text: string) => {
+    const limit = PLATFORM_LIMITS[globalTheme.platform] || 280;
+    if (text.length > limit || (text.match(/\n/g) || []).length > 2) {
+      setPastedContent(text);
+      setShowPasteModal(true);
+    } else {
       updateSlide(slide.id, {
-          annotations: (slide.annotations || []).filter(a => a.id !== annotationId)
+        content: { ...slide.content, primary: slide.content.primary + text },
       });
+    }
   };
 
   const handleConfirmSplit = () => {
@@ -153,18 +179,18 @@ export function SlideCard({ slide, index }: SlideCardProps) {
 
     const newSlides: Slide[] = chunks.map((content) => ({
       id: uuidv4(),
-      type: 'social',
-      layout: 'single',
+      type: "social",
+      layout: "single",
       content: { primary: content },
       settings: {
-          frame: 'macos',
-          theme: globalTheme.platform,
-          padding: 32
+        frame: globalTheme.frameStyle || "macos",
+        theme: globalTheme.platform,
+        padding: 32,
       },
-      author: slide.author,
-      stats: { ...slide.stats }, 
+      author: globalTheme.author || slide.author,
+      stats: { ...slide.stats },
       date: slide.date,
-      annotations: []
+      annotations: [],
     }));
 
     setSlides(newSlides);
@@ -173,7 +199,12 @@ export function SlideCard({ slide, index }: SlideCardProps) {
   };
 
   const handleCancelSplit = () => {
-    updateSlide(slide.id, { content: { ...slide.content, primary: slide.content.primary + pastedContent } });
+    updateSlide(slide.id, {
+      content: {
+        ...slide.content,
+        primary: slide.content.primary + pastedContent,
+      },
+    });
     setSourceText("");
     setShowPasteModal(false);
     setPastedContent("");
@@ -183,19 +214,17 @@ export function SlideCard({ slide, index }: SlideCardProps) {
   const charCount = slide.content.primary?.length || 0;
   const isOverLimit = charCount > limit;
 
-  // Type Toggle Helpers
   const TYPES: { id: SlideType; icon: any; label: string }[] = [
-      { id: "social", icon: Smartphone, label: "Social" },
-      { id: "code", icon: Code, label: "Code" },
-      { id: "diff", icon: Columns, label: "Diff" },
-      { id: "text", icon: FileText, label: "Text" },
+    { id: "social", icon: Smartphone, label: "Social" },
+    { id: "code", icon: Code, label: "Code" },
+    { id: "diff", icon: Columns, label: "Diff" },
+    { id: "text", icon: FileText, label: "Text" },
   ];
 
-  // Layout Toggle Helpers
   const LAYOUTS: { id: SlideLayout; icon: any; label: string }[] = [
-      { id: "single", icon: Square, label: "Single" },
-      { id: "split", icon: Columns, label: "Split" },
-      { id: "stack", icon: Layers, label: "Stack" },
+    { id: "single", icon: Square, label: "Single" },
+    { id: "split", icon: Columns, label: "Split" },
+    { id: "stack", icon: Layers, label: "Stack" },
   ];
 
   return (
@@ -208,107 +237,122 @@ export function SlideCard({ slide, index }: SlideCardProps) {
       />
       <motion.div
         layout
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
-        className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700"
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        className="bg-white dark:bg-black p-1 rounded-[2rem] shadow-2xl border border-gray-100 dark:border-gray-800"
       >
-        <div className="flex justify-between items-center mb-4">
-          <div className="flex items-center gap-3">
-              <span className="font-semibold text-gray-500">Slide {index + 1}</span>
-              
+        <div className="p-6">
+          <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="flex flex-col">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em]">
+                  Slide {index + 1}
+                </span>
+                <span className="text-xs font-mono text-gray-300">
+                  ID: {slide.id.slice(0, 8)}
+                </span>
+              </div>
+
+              <div className="h-8 w-px bg-gray-100 dark:bg-gray-800 mx-2" />
+
               {/* Type Switcher */}
-              <div className="flex bg-gray-100 dark:bg-gray-700 rounded-md p-0.5">
-                  {TYPES.map(t => (
-                      <button
-                        key={t.id}
-                        onClick={() => updateSlide(slide.id, { type: t.id })}
-                        className={clsx(
-                            "p-1.5 rounded text-xs flex items-center gap-1 transition-all",
-                            slide.type === t.id 
-                                ? "bg-white dark:bg-gray-600 shadow-sm text-blue-600 dark:text-blue-400" 
-                                : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-                        )}
-                        title={t.label}
-                      >
-                          <t.icon size={14} />
-                      </button>
-                  ))}
+              <div className="flex bg-gray-50 dark:bg-gray-900 rounded-xl p-1 border border-gray-100 dark:border-gray-800">
+                {TYPES.map((t) => (
+                  <button
+                    type="button"
+                    key={t.id}
+                    onClick={() => updateSlide(slide.id, { type: t.id })}
+                    className={clsx(
+                      "p-2 rounded-lg transition-all",
+                      slide.type === t.id
+                        ? "bg-white dark:bg-gray-800 shadow-sm text-blue-500"
+                        : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300",
+                    )}
+                    title={t.label}
+                  >
+                    <t.icon size={16} />
+                  </button>
+                ))}
               </div>
 
               {/* Layout Switcher */}
-              <div className="flex bg-gray-100 dark:bg-gray-700 rounded-md p-0.5">
-                  {LAYOUTS.map(l => (
-                      <button
-                        key={l.id}
-                        onClick={() => updateSlide(slide.id, { layout: l.id })}
-                        className={clsx(
-                            "p-1.5 rounded text-xs flex items-center gap-1 transition-all",
-                            slide.layout === l.id 
-                                ? "bg-white dark:bg-gray-600 shadow-sm text-blue-600 dark:text-blue-400" 
-                                : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-                        )}
-                        title={l.label}
-                      >
-                          <l.icon size={14} />
-                      </button>
-                  ))}
+              <div className="flex bg-gray-50 dark:bg-gray-900 rounded-xl p-1 border border-gray-100 dark:border-gray-800">
+                {LAYOUTS.map((l) => (
+                  <button
+                    type="button"
+                    key={l.id}
+                    onClick={() => updateSlide(slide.id, { layout: l.id })}
+                    className={clsx(
+                      "p-2 rounded-lg transition-all",
+                      slide.layout === l.id
+                        ? "bg-white dark:bg-gray-800 shadow-sm text-blue-500"
+                        : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300",
+                    )}
+                    title={l.label}
+                  >
+                    <l.icon size={16} />
+                  </button>
+                ))}
               </div>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleUnfurl}
+                disabled={isUnfurling}
+                className="text-gray-400 hover:text-purple-500 p-2 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-xl transition-all disabled:opacity-50"
+                title="Import from URL"
+              >
+                <Link2 size={18} />
+              </button>
+
+              <div className="flex bg-gray-50 dark:bg-gray-900 rounded-xl p-1 border border-gray-100 dark:border-gray-800">
+                <button
+                  type="button"
+                  onClick={handleCopyImage}
+                  disabled={isGenerating}
+                  className="text-gray-400 hover:text-green-500 p-2 hover:bg-white dark:hover:bg-gray-800 rounded-lg transition-all disabled:opacity-50"
+                  title="Copy Image"
+                >
+                  <ClipboardCopy size={18} />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDownload}
+                  disabled={isGenerating}
+                  className="text-gray-400 hover:text-green-500 p-2 hover:bg-white dark:hover:bg-gray-800 rounded-lg transition-all disabled:opacity-50"
+                  title="Download PNG"
+                >
+                  <Download size={18} />
+                </button>
+              </div>
+
+              <div className="w-px h-8 bg-gray-100 dark:bg-gray-800 mx-1 self-center" />
+
+              <button
+                type="button"
+                onClick={() => duplicateSlide(slide.id)}
+                className="text-gray-400 hover:text-blue-500 p-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all"
+                title="Duplicate"
+              >
+                <Copy size={18} />
+              </button>
+              <button
+                type="button"
+                onClick={() => removeSlide(slide.id)}
+                className="text-gray-400 hover:text-red-500 p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all"
+                title="Delete"
+              >
+                <Trash2 size={18} />
+              </button>
+            </div>
           </div>
 
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={handleUnfurl}
-              disabled={isUnfurling}
-              className="text-gray-500 hover:text-purple-500 p-1 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded cursor-pointer disabled:opacity-50"
-              title="Import from URL"
-            >
-              <Link2 size={16} />
-            </button>
-
-            <button
-              type="button"
-              onClick={handleCopyImage}
-              disabled={isGenerating}
-              className="text-gray-500 hover:text-green-500 p-1 hover:bg-green-50 dark:hover:bg-green-900/20 rounded cursor-pointer disabled:opacity-50"
-              title="Copy Image to Clipboard"
-            >
-              <ClipboardCopy size={16} />
-            </button>
-            <button
-              type="button"
-              onClick={handleDownload}
-              disabled={isGenerating}
-              className="text-gray-500 hover:text-green-500 p-1 hover:bg-green-50 dark:hover:bg-green-900/20 rounded cursor-pointer disabled:opacity-50"
-              title="Download Image"
-            >
-              <Download size={16} />
-            </button>
-
-            <div className="w-px h-4 bg-gray-200 dark:bg-gray-700 mx-1 self-center" />
-
-            <button
-              type="button"
-              onClick={() => duplicateSlide(slide.id)}
-              className="text-gray-500 hover:text-blue-500 p-1 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded cursor-pointer"
-              title="Duplicate slide"
-            >
-              <Copy size={16} />
-            </button>
-            <button
-              type="button"
-              onClick={() => removeSlide(slide.id)}
-              className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded cursor-pointer"
-              title="Delete slide"
-            >
-              <Trash2 size={16} />
-            </button>
-          </div>
-        </div>
-
-        <div className="border border-gray-200 dark:border-gray-700 rounded-md">
+          <div className="border border-gray-100 dark:border-gray-800 rounded-[1.5rem] overflow-hidden bg-gray-50/50 dark:bg-gray-900/20">
             <SlidePreview
+              slideId={slide.id}
               content={slide.content}
               theme={slide.settings?.theme || globalTheme.platform}
               type={slide.type}
@@ -319,82 +363,128 @@ export function SlideCard({ slide, index }: SlideCardProps) {
               date={slide.date}
               annotations={slide.annotations}
               onUpdateContent={handleUpdateContent}
+              onUpdateAnnotation={(annId, updates) =>
+                updateAnnotation(slide.id, annId, updates)
+              }
               onAddAnnotation={handleAddAnnotation}
               onRemoveAnnotation={handleRemoveAnnotation}
+              onPaste={handlePaste}
             />
-        </div>
+          </div>
 
-        <div className="flex items-center justify-between mt-3 px-1">
-           <div className={`text-xs ${isOverLimit ? "text-red-500 font-bold" : "text-gray-400"}`}>
-              {charCount} / {limit}
-           </div>
+          <div className="flex flex-col md:flex-row items-center justify-between mt-6 px-2 gap-4">
+            <div className="flex items-center gap-3">
+              <div
+                className={clsx(
+                  "text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wider",
+                  isOverLimit
+                    ? "bg-red-100 text-red-600 dark:bg-red-900/30"
+                    : "bg-gray-100 text-gray-500 dark:bg-gray-800",
+                )}
+              >
+                {charCount} / {limit}
+              </div>
+              {isOverLimit && (
+                <span className="text-[10px] text-red-500 font-bold uppercase animate-pulse">
+                  Limit Exceeded
+                </span>
+              )}
+            </div>
 
-          <div className="flex items-center gap-4">
-            <div
-              className="flex items-center gap-1.5 text-gray-400"
-              title="Replies"
-            >
-              <MessageCircle size={14} />
-              <input
-                type="number"
-                value={slide.stats.replies}
-                onChange={(e) =>
-                  updateSlide(slide.id, {
-                    stats: {
-                      ...slide.stats,
-                      replies: parseInt(e.target.value, 10) || 0,
-                    },
-                  })
-                }
-                className="w-16 bg-transparent border-b border-dashed border-gray-300 dark:border-gray-700 focus:border-blue-500 outline-none text-center text-sm"
-              />
-            </div>
-            <div
-              className="flex items-center gap-1.5 text-gray-400"
-              title="Shares"
-            >
-              <Repeat2 size={14} />
-              <input
-                type="number"
-                value={slide.stats.shares}
-                onChange={(e) =>
-                  updateSlide(slide.id, {
-                    stats: {
-                      ...slide.stats,
-                      shares: parseInt(e.target.value, 10) || 0,
-                    },
-                  })
-                }
-                className="w-16 bg-transparent border-b border-dashed border-gray-300 dark:border-gray-700 focus:border-blue-500 outline-none text-center text-sm"
-              />
-            </div>
-            <div
-              className="flex items-center gap-1.5 text-gray-400"
-              title="Likes"
-            >
-              <Heart size={14} />
-              <input
-                type="number"
-                value={slide.stats.likes}
-                onChange={(e) =>
-                  updateSlide(slide.id, {
-                    stats: {
-                      ...slide.stats,
-                      likes: parseInt(e.target.value, 10) || 0,
-                    },
-                  })
-                }
-                className="w-16 bg-transparent border-b border-dashed border-gray-300 dark:border-gray-700 focus:border-blue-500 outline-none text-center text-sm"
-              />
-            </div>
-            <button
-              type="button"
-              onClick={randomizeStats}
-              className="ml-2 text-gray-400 hover:text-blue-500 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-              title="Randomize Stats"
-            >
-              <RefreshCw size={14} />
-            </button>
+            {globalTheme.showFooter && (
+              <div className="flex items-center gap-6 bg-gray-50 dark:bg-gray-900 px-4 py-2 rounded-2xl border border-gray-100 dark:border-gray-800">
+                <div
+                  className="flex items-center gap-2 text-gray-400 group"
+                  title="Replies"
+                >
+                  <MessageCircle
+                    size={14}
+                    className="group-hover:text-blue-500 transition-colors"
+                  />
+                  <input
+                    type="number"
+                    value={slide.stats?.replies || 0}
+                    onChange={(e) =>
+                      updateSlide(slide.id, {
+                        stats: {
+                          ...(slide.stats || {
+                            likes: 0,
+                            replies: 0,
+                            shares: 0,
+                          }),
+                          replies: parseInt(e.target.value, 10) || 0,
+                        },
+                      })
+                    }
+                    className="w-12 bg-transparent border-none focus:ring-0 outline-none text-xs font-bold text-gray-700 dark:text-gray-300"
+                    placeholder="0"
+                  />
+                </div>
+                <div
+                  className="flex items-center gap-2 text-gray-400 group"
+                  title="Shares"
+                >
+                  <Repeat2
+                    size={14}
+                    className="group-hover:text-green-500 transition-colors"
+                  />
+                  <input
+                    type="number"
+                    value={slide.stats?.shares || 0}
+                    onChange={(e) =>
+                      updateSlide(slide.id, {
+                        stats: {
+                          ...(slide.stats || {
+                            likes: 0,
+                            replies: 0,
+                            shares: 0,
+                          }),
+                          shares: parseInt(e.target.value, 10) || 0,
+                        },
+                      })
+                    }
+                    className="w-12 bg-transparent border-none focus:ring-0 outline-none text-xs font-bold text-gray-700 dark:text-gray-300"
+                    placeholder="0"
+                  />
+                </div>
+                <div
+                  className="flex items-center gap-2 text-gray-400 group"
+                  title="Likes"
+                >
+                  <Heart
+                    size={14}
+                    className="group-hover:text-pink-500 transition-colors"
+                  />
+                  <input
+                    type="number"
+                    value={slide.stats?.likes || 0}
+                    onChange={(e) =>
+                      updateSlide(slide.id, {
+                        stats: {
+                          ...(slide.stats || {
+                            likes: 0,
+                            replies: 0,
+                            shares: 0,
+                          }),
+                          likes: parseInt(e.target.value, 10) || 0,
+                        },
+                      })
+                    }
+                    className="w-12 bg-transparent border-none focus:ring-0 outline-none text-xs font-bold text-gray-700 dark:text-gray-300"
+                    placeholder="0"
+                  />
+                </div>
+                <div className="w-px h-4 bg-gray-200 dark:bg-gray-700" />
+                <button
+                  type="button"
+                  onClick={randomizeStats}
+                  className="text-gray-400 hover:text-blue-500 transition-all hover:rotate-180 duration-500"
+                  title="Randomize Stats"
+                >
+                  <Sparkles size={14} />
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </motion.div>

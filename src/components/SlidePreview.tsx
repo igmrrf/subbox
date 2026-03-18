@@ -1,29 +1,35 @@
 "use client";
 
-import { Author, useDeckStore, type Slide, type SlideLayout, type SlideType, type Annotation } from "@/store/deck-store";
 import clsx from "clsx";
 import {
-  Twitter,
-  Linkedin,
-  Instagram,
-  Smartphone,
-  MessageCircle,
-  Repeat2,
+  Battery,
+  X as CloseIcon,
   Heart,
+  Instagram,
+  Linkedin,
+  MessageCircle,
+  Minus,
   Pencil,
   Plus,
-  Eraser,
-  Battery,
-  Wifi,
+  Repeat2,
   Signal,
-  Minus,
+  Smartphone,
   Square,
-  X as CloseIcon
+  Twitter,
+  Wifi,
 } from "lucide-react";
-import { useHighlighter } from "@/utils/highlighter";
-import { useState, useRef, useEffect } from "react";
-import { AnnotationLayer } from "./AnnotationLayer";
+import { useEffect, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
+import {
+  type Annotation,
+  Author,
+  type Slide,
+  type SlideLayout,
+  type SlideType,
+  useDeckStore,
+} from "@/store/deck-store";
+import { useHighlighter } from "@/utils/highlighter";
+import { AnnotationLayer } from "./AnnotationLayer";
 
 const PLATFORM_STYLES = {
   twitter: {
@@ -54,86 +60,106 @@ const PLATFORM_STYLES = {
 } as const;
 
 function EditableContent({
-    content,
-    type,
-    language,
-    isDark,
-    className,
-    onUpdate,
-    placeholder
+  content,
+  type,
+  language,
+  isDark,
+  className,
+  onUpdate,
+  onPaste,
+  placeholder,
 }: {
-    content: string;
-    type?: SlideType;
-    language?: string;
-    isDark: boolean;
-    className?: string;
-    onUpdate: (val: string) => void;
-    placeholder?: string;
+  content: string;
+  type?: SlideType;
+  language?: string;
+  isDark: boolean;
+  className?: string;
+  onUpdate: (val: string) => void;
+  onPaste?: (val: string) => void;
+  placeholder?: string;
 }) {
-    const [isEditing, setIsEditing] = useState(false);
-    
-    // Determine language for highlighting
-    let highlightLang = 'text';
-    if (type === 'code' || type === 'hybrid') highlightLang = language || 'javascript';
-    if (type === 'diff') highlightLang = 'diff';
+  const [isEditing, setIsEditing] = useState(false);
 
-    const html = useHighlighter(
-        content,
-        highlightLang,
-        isDark ? 'dark' : 'light'
-    );
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
+  // Determine language for highlighting
+  let highlightLang = "text";
+  if (type === "code" || type === "hybrid")
+    highlightLang = language || "javascript";
+  if (type === "diff") highlightLang = "diff";
 
-    // Auto-focus when entering edit mode
-    useEffect(() => {
-        if (isEditing && textareaRef.current) {
-            textareaRef.current.focus();
-            // Move cursor to end
-            textareaRef.current.setSelectionRange(textareaRef.current.value.length, textareaRef.current.value.length);
-        }
-    }, [isEditing]);
+  const html = useHighlighter(
+    content,
+    highlightLang,
+    isDark ? "dark" : "light",
+  );
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-    if (isEditing) {
-        return (
-            <textarea
-                ref={textareaRef}
-                value={content}
-                onChange={(e) => onUpdate(e.target.value)}
-                onBlur={() => setIsEditing(false)}
-                className={clsx(
-                    className,
-                    "w-full h-full bg-transparent outline-none resize-none border-none p-0 m-0 overflow-hidden",
-                    "focus:ring-0",
-                    type === 'code' && "font-mono"
-                )}
-                placeholder={placeholder}
-                style={{ fontFamily: type === 'code' ? 'monospace' : 'inherit' }}
-            />
-        );
+  // Auto-focus when entering edit mode
+  useEffect(() => {
+    if (isEditing && textareaRef.current) {
+      textareaRef.current.focus();
+      // Move cursor to end
+      textareaRef.current.setSelectionRange(
+        textareaRef.current.value.length,
+        textareaRef.current.value.length,
+      );
     }
+  }, [isEditing]);
 
-    if ((type === 'code' || type === 'hybrid' || type === 'diff') && html) {
-        return (
-            <div
-                className={clsx(className, "cursor-text min-h-[1.5em] relative")}
-                onClick={() => setIsEditing(true)}
-                dangerouslySetInnerHTML={{ __html: html }}
-                style={{ fontFamily: 'monospace' }}
-            />
-        );
+  const handlePaste = (e: React.ClipboardEvent) => {
+    if (onPaste) {
+      const pastedText = e.clipboardData.getData("text");
+      if (pastedText) {
+        onPaste(pastedText);
+      }
     }
+  };
 
+  if (isEditing) {
     return (
-        <div 
-            className={clsx(className, "cursor-text min-h-[1.5em] whitespace-pre-wrap relative")}
-            onClick={() => setIsEditing(true)}
-        >
-            {content || <span className="opacity-40">{placeholder}</span>}
-        </div>
+      <textarea
+        ref={textareaRef}
+        value={content}
+        onChange={(e) => onUpdate(e.target.value)}
+        onBlur={() => setIsEditing(false)}
+        onPaste={handlePaste}
+        className={clsx(
+          className,
+          "w-full h-full bg-transparent outline-none resize-none border-none p-0 m-0 overflow-hidden",
+          "focus:ring-0",
+          type === "code" && "font-mono",
+        )}
+        placeholder={placeholder}
+        style={{ fontFamily: type === "code" ? "monospace" : "inherit" }}
+      />
     );
+  }
+
+  if ((type === "code" || type === "hybrid" || type === "diff") && html) {
+    return (
+      <div
+        className={clsx(className, "cursor-text min-h-[1.5em] relative")}
+        onClick={() => setIsEditing(true)}
+        dangerouslySetInnerHTML={{ __html: html }}
+        style={{ fontFamily: "monospace" }}
+      />
+    );
+  }
+
+  return (
+    <div
+      className={clsx(
+        className,
+        "cursor-text min-h-[1.5em] whitespace-pre-wrap relative",
+      )}
+      onClick={() => setIsEditing(true)}
+    >
+      {content || <span className="opacity-40">{placeholder}</span>}
+    </div>
+  );
 }
 
 export function SlidePreview({
+  slideId,
   content,
   layout = "single",
   type = "social",
@@ -144,9 +170,12 @@ export function SlidePreview({
   date,
   annotations = [],
   onUpdateContent,
+  onUpdateAnnotation,
   onAddAnnotation,
-  onRemoveAnnotation
+  onRemoveAnnotation,
+  onPaste,
 }: {
+  slideId: string;
   content: Slide["content"];
   layout?: SlideLayout;
   type?: SlideType;
@@ -157,8 +186,10 @@ export function SlidePreview({
   date?: string;
   annotations?: Annotation[];
   onUpdateContent?: (primary: string, secondary?: string) => void;
+  onUpdateAnnotation?: (id: string, updates: Partial<Annotation>) => void;
   onAddAnnotation?: (annotation: Annotation) => void;
   onRemoveAnnotation?: (id: string) => void;
+  onPaste?: (val: string) => void;
 }) {
   const { globalTheme } = useDeckStore();
   const [showAnnotationTools, setShowAnnotationTools] = useState(false);
@@ -177,7 +208,7 @@ export function SlidePreview({
     });
 
   const formatNumber = (num: number) => {
-    if (num >= 1000) return (num / 1000).toFixed(1) + "K";
+    if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
     return num.toString();
   };
 
@@ -225,68 +256,80 @@ export function SlidePreview({
     if (textLength > 200) sizeClass = "text-sm";
     else sizeClass = "text-base";
   }
-  
-  if (type === 'code') {
-      sizeClass = "text-sm md:text-base";
+
+  if (type === "code") {
+    sizeClass = "text-sm md:text-base";
   }
 
   const handleUpdatePrimary = (val: string) => {
-      onUpdateContent?.(val, content.secondary);
+    onUpdateContent?.(val, content.secondary);
   };
 
   const handleUpdateSecondary = (val: string) => {
-      onUpdateContent?.(content.primary, val);
+    onUpdateContent?.(content.primary, val);
   };
 
   const handleAddArrow = () => {
-      onAddAnnotation?.({
-          id: uuidv4(),
-          type: "arrow",
-          x: 100,
-          y: 100,
-          width: 100,
-          height: 50,
-          color: "red"
-      });
+    onAddAnnotation?.({
+      id: uuidv4(),
+      type: "arrow",
+      x: 100,
+      y: 100,
+      width: 100,
+      height: 50,
+      color: "red",
+    });
   };
 
   const handleAddCircle = () => {
-      onAddAnnotation?.({
-          id: uuidv4(),
-          type: "circle",
-          x: 200,
-          y: 200,
-          width: 40,
-          height: 40,
-          color: "red"
-      });
+    onAddAnnotation?.({
+      id: uuidv4(),
+      type: "circle",
+      x: 200,
+      y: 200,
+      width: 40,
+      height: 40,
+      color: "red",
+    });
   };
 
-  const currentFrame = globalTheme.frameStyle || (globalTheme.windowChrome ? "macos" : "none");
+  const currentFrame =
+    globalTheme.frameStyle || (globalTheme.windowChrome ? "macos" : "none");
 
   return (
-    <div className="w-full h-full min-h-[500px] flex justify-center items-center bg-gray-100 dark:bg-gray-900/50 p-4 rounded-lg overflow-y-auto relative group">
-      
+    <div className="w-full h-full min-h-[400px] flex justify-center items-center bg-gray-100/50 dark:bg-gray-900/20 p-4 md:p-12 rounded-2xl overflow-hidden relative group">
       {/* Annotation Toolbar */}
       <div className="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
-          <button 
-            onClick={() => setShowAnnotationTools(!showAnnotationTools)}
-            className="p-2 bg-white dark:bg-gray-800 rounded-full shadow-md text-gray-500 hover:text-blue-500"
-            title="Annotations"
-          >
-              <Pencil size={16} />
-          </button>
-          
-          {showAnnotationTools && (
-              <div className="flex flex-col gap-2 bg-white dark:bg-gray-800 p-2 rounded-lg shadow-lg">
-                  <button onClick={handleAddArrow} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded" title="Add Arrow">
-                      <Plus size={16} className="rotate-45" /> Arrow
-                  </button>
-                  <button onClick={handleAddCircle} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded" title="Add Circle">
-                      <div className="w-4 h-4 border-2 border-current rounded-full" />
-                  </button>
-              </div>
-          )}
+        <button
+          type="button"
+          onClick={() => setShowAnnotationTools(!showAnnotationTools)}
+          className="p-2.5 bg-white dark:bg-gray-800 rounded-full shadow-lg text-gray-500 hover:text-blue-500 transition-all hover:scale-110"
+          title="Annotations"
+        >
+          <Pencil size={18} />
+        </button>
+
+        {showAnnotationTools && (
+          <div className="flex flex-col gap-2 bg-white dark:bg-gray-800 p-2 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700">
+            <button
+              type="button"
+              onClick={handleAddArrow}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg flex items-center gap-2 text-xs font-bold"
+              title="Add Arrow"
+            >
+              <Plus size={14} className="rotate-45" /> Arrow
+            </button>
+            <button
+              type="button"
+              onClick={handleAddCircle}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg flex items-center gap-2 text-xs font-bold"
+              title="Add Circle"
+            >
+              <div className="w-4 h-4 border-2 border-current rounded-full" />{" "}
+              Circle
+            </button>
+          </div>
+        )}
       </div>
 
       <div
@@ -296,27 +339,26 @@ export function SlidePreview({
           }),
         }}
         className={clsx(
-          "w-full max-w-[600px] flex items-center justify-center p-8 md:p-12 relative transition-all duration-300",
+          "w-full max-w-[600px] flex items-center justify-center p-6 md:p-14 relative transition-all duration-500 ease-out rounded-[2rem] md:rounded-[3rem]",
           !globalTheme.background && style.backgroundClass,
         )}
       >
         <div
           className={clsx(
-            "w-full h-full rounded-xl flex flex-col transition-all duration-300 relative",
-            "min-h-[300px]",
+            "w-full h-auto rounded-2xl md:rounded-3xl flex flex-col transition-all duration-300 relative overflow-hidden",
+            "min-h-[200px]",
             cardBgClass,
             shadowClass,
             backdropClass,
             globalTheme.cardStyle !== "flat" && "border",
             cardBorderClass,
           )}
-          style={{
-            aspectRatio: style.aspectRatio,
-          }}
         >
           {/* Annotation Layer */}
-          <AnnotationLayer 
-            annotations={annotations} 
+          <AnnotationLayer
+            slideId={slideId}
+            annotations={annotations}
+            onUpdateAnnotation={onUpdateAnnotation}
             onRemoveAnnotation={onRemoveAnnotation}
           />
 
@@ -324,16 +366,31 @@ export function SlidePreview({
           {currentFrame === "macos" && (
             <div
               className={clsx(
-                "h-12 shrink-0 w-full flex items-center justify-between px-4 border-b relative z-10",
+                "h-12 shrink-0 w-full flex items-center justify-between px-6 border-b relative z-10",
                 isDark ? "border-white/10" : "border-black/5",
               )}
             >
               <div className="flex gap-2">
-                <div className={clsx("w-3 h-3 rounded-full shadow-sm", dotColors.red)} />
-                <div className={clsx("w-3 h-3 rounded-full shadow-sm", dotColors.yellow)} />
-                <div className={clsx("w-3 h-3 rounded-full shadow-sm", dotColors.green)} />
+                <div
+                  className={clsx(
+                    "w-3 h-3 rounded-full shadow-sm",
+                    dotColors.red,
+                  )}
+                />
+                <div
+                  className={clsx(
+                    "w-3 h-3 rounded-full shadow-sm",
+                    dotColors.yellow,
+                  )}
+                />
+                <div
+                  className={clsx(
+                    "w-3 h-3 rounded-full shadow-sm",
+                    dotColors.green,
+                  )}
+                />
               </div>
-              <div className="opacity-70">
+              <div className="opacity-70 truncate max-w-[150px] flex justify-end">
                 {globalTheme.logo ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -342,7 +399,7 @@ export function SlidePreview({
                     className="w-6 h-6 object-contain rounded-full"
                   />
                 ) : (
-                  <style.Icon size={24} />
+                  <style.Icon size={20} />
                 )}
               </div>
             </div>
@@ -351,34 +408,52 @@ export function SlidePreview({
           {currentFrame === "windows" && (
             <div
               className={clsx(
-                "h-10 shrink-0 w-full flex items-center justify-between px-4 border-b relative z-10 bg-gray-100 dark:bg-gray-800 rounded-t-xl",
+                "h-10 shrink-0 w-full flex items-center justify-between px-5 border-b relative z-10 bg-gray-50/50 dark:bg-gray-800/50",
                 isDark ? "border-white/10" : "border-black/5",
               )}
             >
-              <div className="text-xs text-gray-500 font-medium ml-2">Subbox</div>
+              <div className="flex items-center gap-2 max-w-[200px] truncate">
+                <div className="opacity-60 shrink-0">
+                  {globalTheme.logo ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={globalTheme.logo}
+                      alt="Logo"
+                      className="w-4 h-4 object-contain"
+                    />
+                  ) : (
+                    <style.Icon size={14} />
+                  )}
+                </div>
+                <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider truncate">
+                  Project Deck
+                </span>
+              </div>
               <div className="flex gap-4">
-                <Minus size={14} className="text-gray-500" />
-                <Square size={12} className="text-gray-500" />
-                <CloseIcon size={14} className="text-gray-500" />
+                <Minus size={14} className="text-gray-400" />
+                <Square size={10} className="text-gray-400" />
+                <CloseIcon size={14} className="text-gray-400" />
               </div>
             </div>
           )}
 
           {currentFrame === "phone" && (
-            <div className="h-8 shrink-0 w-full flex items-center justify-between px-6 pt-2 relative z-10">
-                <div className="text-xs font-semibold text-gray-900 dark:text-gray-100">9:41</div>
-                <div className="absolute left-1/2 -translate-x-1/2 top-0 h-6 w-32 bg-black rounded-b-xl" />
-                <div className="flex gap-1.5 text-gray-900 dark:text-gray-100">
-                    <Signal size={12} />
-                    <Wifi size={12} />
-                    <Battery size={12} />
-                </div>
+            <div className="h-8 shrink-0 w-full flex items-center justify-between px-8 pt-4 relative z-10">
+              <div className="text-[11px] font-bold text-gray-900 dark:text-gray-100">
+                9:41
+              </div>
+              <div className="absolute left-1/2 -translate-x-1/2 top-0 h-6 w-28 bg-black rounded-b-2xl" />
+              <div className="flex gap-1.5 text-gray-900 dark:text-gray-100">
+                <Signal size={12} />
+                <Wifi size={12} />
+                <Battery size={12} />
+              </div>
             </div>
           )}
 
-          <div className="p-8 md:p-10 flex-1 flex flex-col relative z-10">
-            <div className="flex items-center gap-3 mb-6 shrink-0">
-              <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center overflow-hidden border border-black/5 dark:border-white/10">
+          <div className="p-8 md:p-12 flex-1 flex flex-col relative z-10">
+            <div className="flex items-center gap-4 mb-8 shrink-0">
+              <div className="w-14 h-14 rounded-full bg-orange-100 flex items-center justify-center overflow-hidden border-2 border-white dark:border-gray-800 shadow-sm">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={safeAuthor.avatar}
@@ -389,104 +464,141 @@ export function SlidePreview({
               <div className="flex flex-col">
                 <span
                   className={clsx(
-                    "font-bold text-lg leading-tight",
+                    "font-bold text-xl leading-tight tracking-tight",
                     isDark ? "text-white" : "text-black",
                   )}
                 >
                   {safeAuthor.name}
                 </span>
                 {safeAuthor.handle && (
-                  <span className="text-gray-500 dark:text-gray-400 text-sm">
+                  <span className="text-gray-500 dark:text-gray-400 text-sm font-medium opacity-70">
                     {safeAuthor.handle}
                   </span>
                 )}
               </div>
             </div>
 
-            <div className="flex-1 w-full min-h-0 mb-6 relative">
+            <div className="flex-1 w-full min-h-0 mb-8 relative break-words">
               {layout === "split" ? (
-                <div className="grid grid-cols-2 gap-4 h-full">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 h-full">
                   <EditableContent
                     content={content.primary}
                     type={type}
                     language={language}
                     isDark={isDark}
-                    className={clsx("font-medium leading-relaxed", sizeClass)}
+                    className={clsx(
+                      "font-medium leading-relaxed break-words",
+                      sizeClass,
+                    )}
                     onUpdate={handleUpdatePrimary}
+                    onPaste={onPaste}
                     placeholder="Primary content..."
                   />
                   <EditableContent
                     content={content.secondary || ""}
-                    type={type === 'code' ? 'text' : type} 
+                    type={type === "code" ? "text" : type}
                     language={undefined}
                     isDark={isDark}
-                    className={clsx("font-medium leading-relaxed opacity-80", sizeClass)}
+                    className={clsx(
+                      "font-medium leading-relaxed opacity-60 break-words",
+                      sizeClass,
+                    )}
                     onUpdate={handleUpdateSecondary}
                     placeholder="Secondary content..."
                   />
                 </div>
               ) : layout === "stack" ? (
-                <div className="flex flex-col gap-4 h-full">
+                <div className="flex flex-col gap-8 h-full">
                   <EditableContent
                     content={content.primary}
                     type={type}
                     language={language}
                     isDark={isDark}
-                    className={clsx("font-medium leading-relaxed", sizeClass)}
+                    className={clsx(
+                      "font-medium leading-relaxed break-words",
+                      sizeClass,
+                    )}
                     onUpdate={handleUpdatePrimary}
+                    onPaste={onPaste}
                     placeholder="Primary content..."
                   />
                   <EditableContent
                     content={content.secondary || ""}
-                    type={type === 'code' ? 'text' : type} 
+                    type={type === "code" ? "text" : type}
                     language={undefined}
                     isDark={isDark}
-                    className={clsx("font-medium leading-relaxed opacity-80", sizeClass)}
+                    className={clsx(
+                      "font-medium leading-relaxed opacity-60 break-words",
+                      sizeClass,
+                    )}
                     onUpdate={handleUpdateSecondary}
                     placeholder="Secondary content..."
                   />
                 </div>
               ) : (
                 <EditableContent
-                    content={content.primary}
-                    type={type}
-                    language={language}
-                    isDark={isDark}
-                    className={clsx("font-medium leading-relaxed", sizeClass)}
-                    onUpdate={handleUpdatePrimary}
-                    placeholder={type === 'code' ? "// Start typing code..." : "Start typing..."}
+                  content={content.primary}
+                  type={type}
+                  language={language}
+                  isDark={isDark}
+                  className={clsx(
+                    "font-medium leading-relaxed break-words",
+                    sizeClass,
+                  )}
+                  onUpdate={handleUpdatePrimary}
+                  onPaste={onPaste}
+                  placeholder={
+                    type === "code"
+                      ? "// Start typing code..."
+                      : "Start typing..."
+                  }
                 />
               )}
             </div>
 
             {(globalTheme.showFooter ?? true) && (
-              <div className="mt-auto pt-4 border-t border-gray-100 dark:border-gray-800/50 shrink-0">
-                <div className="text-gray-500 dark:text-gray-400 text-sm mb-3 font-medium opacity-80">
+              <div className="mt-auto pt-6 border-t border-gray-100 dark:border-gray-800/50 shrink-0">
+                <div className="text-gray-400 dark:text-gray-500 text-[11px] mb-4 font-bold uppercase tracking-widest opacity-80">
                   {safeDate}
                 </div>
-                <div className="flex items-center gap-6">
-                  <div className="flex items-center gap-2 group">
-                    <div className="p-1.5 rounded-full group-hover:bg-blue-50 dark:group-hover:bg-blue-900/20 text-gray-500 dark:text-gray-400 transition-colors">
-                      <MessageCircle size={18} />
+                <div className="flex items-center gap-8">
+                  <div className="flex items-center gap-2.5 group">
+                    <div className="p-2 rounded-xl group-hover:bg-blue-50 dark:group-hover:bg-blue-900/20 text-gray-400 transition-colors">
+                      <MessageCircle size={20} />
                     </div>
-                    <span className="text-gray-900 dark:text-gray-100 font-bold text-sm">
-                      {formatNumber(safeStats.replies)}{" "}
+                    <span
+                      className={clsx(
+                        "font-bold text-sm",
+                        isDark ? "text-gray-200" : "text-gray-900",
+                      )}
+                    >
+                      {formatNumber(safeStats.replies)}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2 group">
-                    <div className="p-1.5 rounded-full group-hover:bg-green-50 dark:group-hover:bg-green-900/20 text-gray-500 dark:text-gray-400 transition-colors">
-                      <Repeat2 size={18} />
+                  <div className="flex items-center gap-2.5 group">
+                    <div className="p-2 rounded-xl group-hover:bg-green-50 dark:group-hover:bg-green-900/20 text-gray-400 transition-colors">
+                      <Repeat2 size={20} />
                     </div>
-                    <span className="text-gray-900 dark:text-gray-100 font-bold text-sm">
-                      {formatNumber(safeStats.shares)}{" "}
+                    <span
+                      className={clsx(
+                        "font-bold text-sm",
+                        isDark ? "text-gray-200" : "text-gray-900",
+                      )}
+                    >
+                      {formatNumber(safeStats.shares)}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2 group">
-                    <div className="p-1.5 rounded-full group-hover:bg-pink-50 dark:group-hover:bg-pink-900/20 text-gray-500 dark:text-gray-400 transition-colors">
-                      <Heart size={18} />
+                  <div className="flex items-center gap-2.5 group">
+                    <div className="p-2 rounded-xl group-hover:bg-pink-50 dark:group-hover:bg-pink-900/20 text-gray-400 transition-colors">
+                      <Heart size={20} />
                     </div>
-                    <span className="text-gray-900 dark:text-gray-100 font-bold text-sm">
-                      {formatNumber(safeStats.likes)}{" "}
+                    <span
+                      className={clsx(
+                        "font-bold text-sm",
+                        isDark ? "text-gray-200" : "text-gray-900",
+                      )}
+                    >
+                      {formatNumber(safeStats.likes)}
                     </span>
                   </div>
                 </div>

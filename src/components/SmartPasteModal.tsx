@@ -25,12 +25,14 @@ export function SmartPasteModal({
         </p>
         <div className="flex justify-end gap-3">
           <button
+            type="button"
             onClick={onClose}
             className="px-4 py-2 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 rounded-md transition-colors cursor-pointer"
           >
             No, keep it here
           </button>
           <button
+            type="button"
             onClick={onConfirm}
             className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md transition-colors cursor-pointer"
           >

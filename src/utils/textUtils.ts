@@ -18,7 +18,7 @@ export function splitTextContent(text: string, limit: number): string[] {
       let currentChunk = "";
 
       for (const word of words) {
-        if ((currentChunk + " " + word).length > limit) {
+        if (`${currentChunk} ${word}`.length > limit) {
           if (currentChunk) chunks.push(currentChunk.trim());
           currentChunk = word;
         } else {

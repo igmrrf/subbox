@@ -1,4 +1,4 @@
-import { SlideType } from "@/store/deck-store";
+import type { SlideType } from "@/store/deck-store";
 
 export interface DetectionResult {
   type: SlideType;
@@ -55,9 +55,9 @@ export function detectInputType(text: string): DetectionResult {
   }, 0);
 
   if (codeScore >= 2 || (codeScore >= 1 && text.length < 100)) {
-     // Check for language hints?
-     // For now just return code
-     return { type: "code" };
+    // Check for language hints?
+    // For now just return code
+    return { type: "code" };
   }
 
   // Default to text
@@ -71,7 +71,7 @@ export function parseHybridContent(text: string) {
   // Actually, for "Hybrid" slide type, we might just store the raw markdown
   // and let the renderer handle it?
   // But the requirement says "Splits content into an AST-like structure".
-  // For MVP, let's keep it as raw markdown in `primary` content, 
+  // For MVP, let's keep it as raw markdown in `primary` content,
   // and the renderer uses a markdown-to-html (or satori-friendly) parser.
-  return text; 
+  return text;
 }

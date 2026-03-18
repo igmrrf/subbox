@@ -29,7 +29,7 @@ export function Editor() {
   return (
     <div className="flex flex-col items-center gap-12 pb-32">
       {/* Deck Controls */}
-      <div className="sticky top-0 z-20 w-full flex justify-center pb-4 pointer-events-none">
+      <div className="sticky top-0 z-20 w-full hidden md:flex justify-center pb-4 pointer-events-none">
         <div className="bg-white/80 dark:bg-black/80 backdrop-blur-md border border-gray-200 dark:border-gray-800 px-4 py-2 rounded-full shadow-xl flex items-center gap-4 pointer-events-auto">
           <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest shrink-0">
             Width

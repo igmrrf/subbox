@@ -24,7 +24,6 @@ import {
   type Annotation,
   Author,
   type Slide,
-  type SlideLayout,
   type SlideType,
   useDeckStore,
 } from "@/store/deck-store";
@@ -84,7 +83,6 @@ function EditableContent({
   let highlightLang = "text";
   if (type === "code" || type === "hybrid")
     highlightLang = language || "javascript";
-  if (type === "diff") highlightLang = "diff";
 
   const html = useHighlighter(
     content,
@@ -134,7 +132,7 @@ function EditableContent({
     );
   }
 
-  if ((type === "code" || type === "hybrid" || type === "diff") && html) {
+  if ((type === "code" || type === "hybrid") && html) {
     return (
       <div
         className={clsx(className, "cursor-text min-h-[1.5em] relative")}
@@ -161,7 +159,6 @@ function EditableContent({
 export function SlidePreview({
   slideId,
   content,
-  layout = "single",
   type = "social",
   language = "javascript",
   theme,
@@ -177,7 +174,6 @@ export function SlidePreview({
 }: {
   slideId: string;
   content: Slide["content"];
-  layout?: SlideLayout;
   type?: SlideType;
   language?: string;
   theme?: string;
@@ -263,10 +259,6 @@ export function SlidePreview({
 
   const handleUpdatePrimary = (val: string) => {
     onUpdateContent?.(val, content.secondary);
-  };
-
-  const handleUpdateSecondary = (val: string) => {
-    onUpdateContent?.(content.primary, val);
   };
 
   const handleAddArrow = () => {
@@ -479,81 +471,23 @@ export function SlidePreview({
             </div>
 
             <div className="flex-1 w-full min-h-0 mb-8 relative break-words">
-              {layout === "split" ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 h-full">
-                  <EditableContent
-                    content={content.primary}
-                    type={type}
-                    language={language}
-                    isDark={isDark}
-                    className={clsx(
-                      "font-medium leading-relaxed break-words",
-                      sizeClass,
-                    )}
-                    onUpdate={handleUpdatePrimary}
-                    onPaste={onPaste}
-                    placeholder="Primary content..."
-                  />
-                  <EditableContent
-                    content={content.secondary || ""}
-                    type={type === "code" ? "text" : type}
-                    language={undefined}
-                    isDark={isDark}
-                    className={clsx(
-                      "font-medium leading-relaxed opacity-60 break-words",
-                      sizeClass,
-                    )}
-                    onUpdate={handleUpdateSecondary}
-                    placeholder="Secondary content..."
-                  />
-                </div>
-              ) : layout === "stack" ? (
-                <div className="flex flex-col gap-8 h-full">
-                  <EditableContent
-                    content={content.primary}
-                    type={type}
-                    language={language}
-                    isDark={isDark}
-                    className={clsx(
-                      "font-medium leading-relaxed break-words",
-                      sizeClass,
-                    )}
-                    onUpdate={handleUpdatePrimary}
-                    onPaste={onPaste}
-                    placeholder="Primary content..."
-                  />
-                  <EditableContent
-                    content={content.secondary || ""}
-                    type={type === "code" ? "text" : type}
-                    language={undefined}
-                    isDark={isDark}
-                    className={clsx(
-                      "font-medium leading-relaxed opacity-60 break-words",
-                      sizeClass,
-                    )}
-                    onUpdate={handleUpdateSecondary}
-                    placeholder="Secondary content..."
-                  />
-                </div>
-              ) : (
-                <EditableContent
-                  content={content.primary}
-                  type={type}
-                  language={language}
-                  isDark={isDark}
-                  className={clsx(
-                    "font-medium leading-relaxed break-words",
-                    sizeClass,
-                  )}
-                  onUpdate={handleUpdatePrimary}
-                  onPaste={onPaste}
-                  placeholder={
-                    type === "code"
-                      ? "// Start typing code..."
-                      : "Start typing..."
-                  }
-                />
-              )}
+              <EditableContent
+                content={content.primary}
+                type={type}
+                language={language}
+                isDark={isDark}
+                className={clsx(
+                  "font-medium leading-relaxed break-words",
+                  sizeClass,
+                )}
+                onUpdate={handleUpdatePrimary}
+                onPaste={onPaste}
+                placeholder={
+                  type === "code"
+                    ? "// Start typing code..."
+                    : "Start typing..."
+                }
+              />
             </div>
 
             {(globalTheme.showFooter ?? true) && (

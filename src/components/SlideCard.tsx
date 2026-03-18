@@ -6,18 +6,15 @@ import { motion } from "framer-motion";
 import {
   ClipboardCopy,
   Code,
-  Columns,
   Copy,
   Download,
   FileText,
   Heart,
-  Layers,
   Link2,
   MessageCircle,
   Repeat2,
   Smartphone,
   Sparkles,
-  Square,
   Trash2,
 } from "lucide-react";
 import { useState } from "react";
@@ -25,7 +22,6 @@ import { v4 as uuidv4 } from "uuid";
 import {
   type Annotation,
   type Slide,
-  type SlideLayout,
   type SlideType,
   useDeckStore,
 } from "@/store/deck-store";
@@ -217,14 +213,7 @@ export function SlideCard({ slide, index }: SlideCardProps) {
   const TYPES: { id: SlideType; icon: any; label: string }[] = [
     { id: "social", icon: Smartphone, label: "Social" },
     { id: "code", icon: Code, label: "Code" },
-    { id: "diff", icon: Columns, label: "Diff" },
     { id: "text", icon: FileText, label: "Text" },
-  ];
-
-  const LAYOUTS: { id: SlideLayout; icon: any; label: string }[] = [
-    { id: "single", icon: Square, label: "Single" },
-    { id: "split", icon: Columns, label: "Split" },
-    { id: "stack", icon: Layers, label: "Stack" },
   ];
 
   return (
@@ -243,109 +232,86 @@ export function SlideCard({ slide, index }: SlideCardProps) {
         className="bg-white dark:bg-black p-1 rounded-[2rem] shadow-2xl border border-gray-100 dark:border-gray-800"
       >
         <div className="p-6">
-          <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
-            <div className="flex flex-wrap items-center gap-4">
-              <div className="flex flex-col">
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em]">
-                  Slide {index + 1}
-                </span>
+          <div className="flex justify-between items-center gap-2 md:gap-4 mb-3 md:mb-6">
+            <div className="flex items-center gap-2 md:gap-4">
+              <div className="hidden md:flex flex-col">
                 <span className="text-xs font-mono text-gray-300">
                   ID: {slide.id.slice(0, 8)}
                 </span>
               </div>
 
-              <div className="h-8 w-px bg-gray-100 dark:bg-gray-800 mx-2" />
+              <div className="hidden md:block h-8 w-px bg-gray-100 dark:bg-gray-800 mx-2" />
 
               {/* Type Switcher */}
-              <div className="flex bg-gray-50 dark:bg-gray-900 rounded-xl p-1 border border-gray-100 dark:border-gray-800">
+              <div className="flex bg-gray-50 dark:bg-gray-900 rounded-xl p-0.5 md:p-1 border border-gray-100 dark:border-gray-800">
                 {TYPES.map((t) => (
                   <button
                     type="button"
                     key={t.id}
                     onClick={() => updateSlide(slide.id, { type: t.id })}
                     className={clsx(
-                      "p-2 rounded-lg transition-all",
+                      "p-1.5 md:p-2 rounded-lg transition-all",
                       slide.type === t.id
                         ? "bg-white dark:bg-gray-800 shadow-sm text-blue-500"
                         : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300",
                     )}
                     title={t.label}
                   >
-                    <t.icon size={16} />
-                  </button>
-                ))}
-              </div>
-
-              {/* Layout Switcher */}
-              <div className="flex bg-gray-50 dark:bg-gray-900 rounded-xl p-1 border border-gray-100 dark:border-gray-800">
-                {LAYOUTS.map((l) => (
-                  <button
-                    type="button"
-                    key={l.id}
-                    onClick={() => updateSlide(slide.id, { layout: l.id })}
-                    className={clsx(
-                      "p-2 rounded-lg transition-all",
-                      slide.layout === l.id
-                        ? "bg-white dark:bg-gray-800 shadow-sm text-blue-500"
-                        : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300",
-                    )}
-                    title={l.label}
-                  >
-                    <l.icon size={16} />
+                    <t.icon className="w-3.5 h-3.5 md:w-4 md:h-4" />
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex gap-1 md:gap-2">
               <button
                 type="button"
                 onClick={handleUnfurl}
                 disabled={isUnfurling}
-                className="text-gray-400 hover:text-purple-500 p-2 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-xl transition-all disabled:opacity-50"
+                className="text-gray-400 hover:text-purple-500 p-1.5 md:p-2 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-xl transition-all disabled:opacity-50"
                 title="Import from URL"
               >
-                <Link2 size={18} />
+                <Link2 className="w-4 h-4 md:w-[18px] md:h-[18px]" />
               </button>
 
-              <div className="flex bg-gray-50 dark:bg-gray-900 rounded-xl p-1 border border-gray-100 dark:border-gray-800">
+              <div className="flex bg-gray-50 dark:bg-gray-900 rounded-xl p-0.5 md:p-1 border border-gray-100 dark:border-gray-800">
                 <button
                   type="button"
                   onClick={handleCopyImage}
                   disabled={isGenerating}
-                  className="text-gray-400 hover:text-green-500 p-2 hover:bg-white dark:hover:bg-gray-800 rounded-lg transition-all disabled:opacity-50"
+                  className="text-gray-400 hover:text-green-500 p-1.5 md:p-2 hover:bg-white dark:hover:bg-gray-800 rounded-lg transition-all disabled:opacity-50"
                   title="Copy Image"
                 >
-                  <ClipboardCopy size={18} />
+                  <ClipboardCopy className="w-4 h-4 md:w-[18px] md:h-[18px]" />
                 </button>
                 <button
                   type="button"
                   onClick={handleDownload}
                   disabled={isGenerating}
-                  className="text-gray-400 hover:text-green-500 p-2 hover:bg-white dark:hover:bg-gray-800 rounded-lg transition-all disabled:opacity-50"
+                  className="text-gray-400 hover:text-green-500 p-1.5 md:p-2 hover:bg-white dark:hover:bg-gray-800 rounded-lg transition-all disabled:opacity-50"
                   title="Download PNG"
                 >
-                  <Download size={18} />
+                  <Download className="w-4 h-4 md:w-[18px] md:h-[18px]" />
                 </button>
               </div>
 
-              <div className="w-px h-8 bg-gray-100 dark:bg-gray-800 mx-1 self-center" />
+              <div className="hidden md:block w-px h-8 bg-gray-100 dark:bg-gray-800 mx-1 self-center" />
 
               <button
                 type="button"
                 onClick={() => duplicateSlide(slide.id)}
-                className="text-gray-400 hover:text-blue-500 p-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all"
+                className="text-gray-400 hover:text-blue-500 p-1.5 md:p-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all"
                 title="Duplicate"
               >
-                <Copy size={18} />
+                <Copy className="w-4 h-4 md:w-[18px] md:h-[18px]" />
               </button>
               <button
                 type="button"
                 onClick={() => removeSlide(slide.id)}
-                className="text-gray-400 hover:text-red-500 p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all"
+                className="text-gray-400 hover:text-red-500 p-1.5 md:p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all"
                 title="Delete"
               >
-                <Trash2 size={18} />
+                <Trash2 className="w-4 h-4 md:w-[18px] md:h-[18px]" />
               </button>
             </div>
           </div>
@@ -357,7 +323,6 @@ export function SlideCard({ slide, index }: SlideCardProps) {
               theme={slide.settings?.theme || globalTheme.platform}
               type={slide.type}
               language={slide.settings?.language}
-              layout={slide.layout}
               author={slide.author}
               stats={slide.stats}
               date={slide.date}

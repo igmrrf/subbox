@@ -10,8 +10,8 @@ export const Author = {
   avatar: "/user.webp",
 };
 
-export type SlideType = "code" | "social" | "text" | "diff" | "hybrid";
-export type SlideLayout = "single" | "split" | "stack";
+export type SlideType = "code" | "social" | "text" | "hybrid";
+export type SlideLayout = "single";
 export type SlideFrame = "macos" | "windows" | "phone" | "none";
 
 export interface SlideContent {
